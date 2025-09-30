@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<database name="logbook" schema="public" type="PostgreSQL - 15.14 (Debian 15.14-1.pgdg13+1)">
+   <tables>
+      <table name="body_metrics" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="body_metrics_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="2" name="measured_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="3" name="weight_kg" nullable="false" remarks="" size="5" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="1" id="4" name="body_fat_pct" nullable="true" remarks="" size="4" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="note" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="7" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="body_metrics_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="body_metrics_idx_user" unique="false">
+            <column ascending="true" name="user_id"/>
+            <column ascending="false" name="measured_at"/>
+         </index>
+         <checkConstraint constraint="(((body_fat_pct &gt;= (0)::numeric) AND (body_fat_pct &lt;= (100)::numeric)))" name="body_metrics_body_fat_pct_check"/>
+         <checkConstraint constraint="(((weight_kg &gt;= (20)::numeric) AND (weight_kg &lt;= (300)::numeric)))" name="body_metrics_weight_kg_check"/>
+      </table>
+      <table name="exercises" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <child column="exercise_id" foreignKey="workout_sets_exercise_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="workout_sets"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="owner_user_id" nullable="true" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="exercises_owner_user_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="name" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="type" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="primary_muscle" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="true" digits="0" id="5" name="is_active" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="7" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="exercises_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="exercises_global_unique_name" unique="true"/>
+         <index name="exercises_user_unique_name" unique="true">
+            <column ascending="true" name="owner_user_id"/>
+         </index>
+         <checkConstraint constraint="((char_length(name) &lt;= 64))" name="exercises_name_check"/>
+      </table>
+      <table name="oauth_identities" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="oauth_identities_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="provider" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="provider_user_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="4" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="oauth_identities_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="oauth_identities_provider_provider_user_id_key" unique="true">
+            <column ascending="true" name="provider"/>
+            <column ascending="true" name="provider_user_id"/>
+         </index>
+      </table>
+      <table name="refresh_tokens" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="refresh_tokens_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="jti" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="family_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="token_hash" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="5" name="issued_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="expires_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="rotated_from_jti" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="8" name="revoked_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="9" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="refresh_tokens_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="refresh_tokens_jti_key" unique="true">
+            <column ascending="true" name="jti"/>
+         </index>
+      </table>
+      <table name="users" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <child column="user_id" foreignKey="body_metrics_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="body_metrics"/>
+            <child column="owner_user_id" foreignKey="exercises_owner_user_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="exercises"/>
+            <child column="user_id" foreignKey="oauth_identities_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="oauth_identities"/>
+            <child column="user_id" foreignKey="refresh_tokens_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="refresh_tokens"/>
+            <child column="user_id" foreignKey="workouts_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="workouts"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="display_name" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="2" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="3" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="users_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <checkConstraint constraint="((char_length(display_name) &lt;= 32))" name="users_display_name_check"/>
+      </table>
+      <table name="workout_sets" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="workout_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="workout_sets_workout_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="workouts"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="exercise_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="workout_sets_exercise_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="exercises"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="set_index" nullable="false" remarks="" size="5" type="int2" typeCode="5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="reps" nullable="true" remarks="" size="5" type="int2" typeCode="5"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="5" name="weight_kg" nullable="true" remarks="" size="6" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="1" id="6" name="rpe" nullable="true" remarks="" size="3" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="7" name="is_warmup" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="rest_sec" nullable="true" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="note" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="10" name="duration_sec" nullable="true" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="11" name="distance_m" nullable="true" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="12" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="13" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="workout_sets_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="workout_sets_idx_exercise" unique="false">
+            <column ascending="true" name="exercise_id"/>
+            <column ascending="true" name="created_at"/>
+         </index>
+         <index name="workout_sets_idx_workout" unique="false">
+            <column ascending="true" name="workout_id"/>
+            <column ascending="true" name="set_index"/>
+         </index>
+         <index name="workout_sets_unique_order" unique="true">
+            <column ascending="true" name="workout_id"/>
+            <column ascending="true" name="set_index"/>
+         </index>
+         <checkConstraint constraint="(((distance_m IS NULL) OR ((distance_m &gt;= (0)::numeric) AND (distance_m &lt;= (100000)::numeric))))" name="workout_sets_distance_m_check"/>
+         <checkConstraint constraint="(((duration_sec IS NULL) OR ((duration_sec &gt;= 0) AND (duration_sec &lt;= 21600))))" name="workout_sets_duration_sec_check"/>
+         <checkConstraint constraint="(((reps IS NOT NULL) OR (weight_kg IS NOT NULL) OR ((duration_sec IS NOT NULL) OR (distance_m IS NOT NULL))))" name="workout_sets_presence"/>
+         <checkConstraint constraint="(((reps &gt;= 1) AND (reps &lt;= 1000)))" name="workout_sets_reps_check"/>
+         <checkConstraint constraint="(((rest_sec IS NULL) OR ((rest_sec &gt;= 0) AND (rest_sec &lt;= 7200))))" name="workout_sets_rest_sec_check"/>
+         <checkConstraint constraint="(((rpe IS NULL) OR ((rpe &gt;= (0)::numeric) AND (rpe &lt;= (10)::numeric))))" name="workout_sets_rpe_check"/>
+         <checkConstraint constraint="((set_index &gt;= 1))" name="workout_sets_set_index_check"/>
+         <checkConstraint constraint="((weight_kg &gt;= (0)::numeric))" name="workout_sets_weight_kg_check"/>
+      </table>
+      <table name="workouts" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <child column="workout_id" foreignKey="workout_sets_workout_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="workout_sets"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="user_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="workouts_user_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="users"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="2" name="started_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="3" name="ended_at" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="note" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="5" name="created_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="6" name="updated_at" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="workouts_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="workouts_idx_user_started" unique="false">
+            <column ascending="true" name="user_id"/>
+            <column ascending="false" name="started_at"/>
+         </index>
+      </table>
+   </tables>
+</database>
