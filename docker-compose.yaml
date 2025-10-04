@@ -1,14 +1,15 @@
+version: "3.8"
 services:
-  db:
-    image: postgres:15
-    container_name: logbook-db
-    environment:
-      POSTGRES_DB: logbook
-      POSTGRES_USER: logbook
-      POSTGRES_PASSWORD: logbook
+  dev-postgres:
+    image: postgres:15.1-alpine
     ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-volumes:
-  pgdata: {}
+      - 5434:5432
+    environment:
+      POSTGRES_USER: lineapi
+      POSTGRES_PASSWORD: lineapi
+      POSTGRES_DB: lineapi
+    restart: always
+    networks:
+      - lesson
+networks:
+  lesson:
