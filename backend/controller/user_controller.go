@@ -109,14 +109,27 @@ func (h *userController) LineCallback(c echo.Context) error {
 		return c.String(http.StatusBadGateway, fmt.Sprintf("profile fetch failed: %v", err))
 	}
 
+	// ★ ここでDBへ登録/更新を確定させる（無ければ作る）
+	user, err := h.uc.EnsureUserFromLineProfile(
+		c.Request().Context(),
+		prof.UserID,          // sub
+		&prof.DisplayName,    // name
+		&prof.PictureURL,     // picture
+		nil,                  // email（必要ならLINE側から取得して渡す）
+	)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("user upsert failed: %v", err))
+	}
+
 	// セッション確立（固定化対策したければ、一旦破棄→新セッションに再保存でもOK）
 	// sess.Options.MaxAge = -1; sess.Save(...) のあと、新たに sub等を入れて再保存 など
 	delete(sess.Values, "oauth_state")
 	delete(sess.Values, "oauth_nonce")
 	delete(sess.Values, "oauth_verifier")
 	sess.Values["sub"] = prof.UserID
-	sess.Values["name"] = prof.DisplayName
-	sess.Values["picture"] = prof.PictureURL
+	sess.Values["user_id"] = user.ID
+	sess.Values["name"] = user.Name
+	sess.Values["picture"] = user.PictureURL
 	_ = sess.Save(c.Request(), c.Response())
 
 	target := h.cfg.FrontendOrigin + "/"

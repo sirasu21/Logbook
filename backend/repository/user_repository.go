@@ -9,12 +9,16 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/sirasu21/Logbook/backend/models"
+	"gorm.io/gorm"
 )
 
 type AuthRepository interface {
 	BuildAuthorizeURL(clientID, redirectURI, state, nonce, codeChallenge string) string
 	ExchangeCode(ctx context.Context, clientID, clientSecret, redirectURI, code, verifier string) (accessToken string, err error)
 	FetchProfile(ctx context.Context, accessToken string) (Profile, error)
+	ResolveOrCreateBySub(ctx context.Context, sub string, name, pictureURL, email *string) (*models.User, error)
 }
 
 type Profile struct {
@@ -24,13 +28,13 @@ type Profile struct {
 	StatusMessage string
 }
 
-type lineAuthRepository struct{ httpClient *http.Client }
+type lineAuthRepository struct{ httpClient *http.Client; db *gorm.DB }
 
-func NewLineAuthRepository(httpClient *http.Client) AuthRepository {
+func NewLineAuthRepository(httpClient *http.Client, db *gorm.DB) AuthRepository {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
-	return &lineAuthRepository{httpClient: httpClient}
+	return &lineAuthRepository{httpClient: httpClient, db: db}
 }
 
 func (r *lineAuthRepository) BuildAuthorizeURL(clientID, redirectURI, state, nonce, codeChallenge string) string {
@@ -99,4 +103,46 @@ func (r *lineAuthRepository) FetchProfile(ctx context.Context, accessToken strin
 		return Profile{}, err
 	}
 	return Profile{UserID: p.UserID, DisplayName: p.DisplayName, PictureURL: p.PictureURL, StatusMessage: p.StatusMessage}, nil
+}
+
+func (r *lineAuthRepository) ResolveOrCreateBySub(ctx context.Context, sub string, name, pictureURL, email *string) (*models.User, error) {
+	var u models.User
+	err := r.db.WithContext(ctx).Where("line_user_id = ?", sub).First(&u).Error
+	switch {
+	case err == nil:
+		// 既存ユーザー：必要なら表示名やアイコンを軽く同期
+		updates := map[string]any{}
+		if name != nil && (u.Name == nil || *u.Name != *name) {
+			updates["name"] = *name
+		}
+		if pictureURL != nil && (u.PictureURL == nil || *u.PictureURL != *pictureURL) {
+			updates["picture_url"] = *pictureURL
+		}
+		if email != nil && (u.Email == nil || *u.Email != *email) {
+			updates["email"] = *email
+		}
+		if len(updates) > 0 {
+			if err := r.db.WithContext(ctx).Model(&u).Updates(updates).Error; err != nil {
+				return nil, err
+			}
+		}
+		return &u, nil
+
+	case err == gorm.ErrRecordNotFound:
+		// 新規ユーザー：sub を主として作成
+		u = models.User{
+			LineUserID: sub,
+			Name:       name,
+			PictureURL: pictureURL,
+			Email:      email,
+		}
+		if err := r.db.WithContext(ctx).Create(&u).Error; err != nil {
+			return nil, err
+		}
+		return &u, nil
+
+	default:
+		// 予期しないDBエラー
+		return nil, err
+	}
 }

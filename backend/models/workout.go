@@ -14,3 +14,8 @@ type Workout struct {
 	// 便利に preload したいとき用（必要になったら）
 	Sets []WorkoutSet `gorm:"foreignKey:WorkoutID" json:"-"`
 }
+
+type CreateWorkoutInput struct {
+	StartedAt time.Time `json:"startedAt"`            // 必須（RFC3339）
+	Note      *string   `json:"note,omitempty"`       // 任意
+}

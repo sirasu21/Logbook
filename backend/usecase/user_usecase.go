@@ -15,6 +15,7 @@ type UserUsecase interface {
 	ExchangeCode(ctx context.Context, channelID, channelSecret, redirectURI, code, verifier string) (string, error)
 	// アクセストークンでプロフィール取得
 	FetchProfile(ctx context.Context, accessToken string) (models.Profile, error)
+	EnsureUserFromLineProfile(ctx context.Context, sub string, displayName, pictureURL, email *string) (*models.User, error)
 }
 
 type userUsecase struct {
@@ -46,4 +47,8 @@ func (u *userUsecase) FetchProfile(ctx context.Context, accessToken string) (mod
         PictureURL:    rp.PictureURL,
         StatusMessage: rp.StatusMessage,
     }, nil
+}
+
+func (u *userUsecase) EnsureUserFromLineProfile(ctx context.Context, sub string, displayName, pictureURL, email *string) (*models.User, error) {
+	return u.authRepo.ResolveOrCreateBySub(ctx, sub, displayName, pictureURL, email)
 }

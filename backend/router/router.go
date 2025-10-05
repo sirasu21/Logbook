@@ -15,7 +15,7 @@ import (
 )
 
 
-    func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoController, userCtl controller.UserController) *echo.Echo {
+    func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoController, userCtl controller.UserController, workoutCtl controller.WorkoutController) *echo.Echo {
         e := echo.New()
         store := sessions.NewCookieStore([]byte("super-secret-key")) 
 	    store.Options = &sessions.Options{
@@ -44,6 +44,7 @@ import (
         e.GET("/healthz", userCtl.Healthz)
         e.GET("/api/auth/line/login",    userCtl.LineLogin)
         e.GET("/api/auth/line/callback", userCtl.LineCallback)
+        
 
         api := e.Group("/api")
         api.GET("/me", userCtl.Me)
@@ -53,6 +54,11 @@ import (
         api.POST("/todos", todoCtl.CreateTodo)
         api.PUT("/todos/:id",  todoCtl.UpdateTodo)
         api.DELETE("/todos/:id", todoCtl.DeleteTodo)
+
+        api.POST("/workouts", workoutCtl.CreateWorkout)
+        api.PATCH("/workouts/:id/end", workoutCtl.EndWorkout) 
+        api.GET("/workouts", workoutCtl.ListWorkouts)
+        api.GET("/workouts/:id", workoutCtl.GetWorkout)
 
         e.GET("/api/logout", userCtl.Logout)
 

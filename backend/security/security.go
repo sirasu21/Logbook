@@ -1,7 +1,6 @@
 package security
 
 import (
-	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -25,8 +24,3 @@ func Sha256Sum(s string) []byte {
     return h[:]
 }
 
-func SignHMAC(data, key []byte) []byte {
-    mac := hmac.New(sha256.New, key)
-    mac.Write(data)
-    return mac.Sum(nil)
-}

@@ -20,13 +20,21 @@ func main() {
 	gdb := db.InitDB()
 
 	todoRepo := repository.NewTodoRepository(gdb)
-	userRepo := repository.NewLineAuthRepository(http.DefaultClient)
+	userRepo := repository.NewLineAuthRepository(http.DefaultClient, gdb)
+	workoutRepo := repository.NewWorkoutRepository(gdb)
+
 	todoUC := usecase.NewTodoUsecase(todoRepo)
 	userUC := usecase.NewUserUsecase(userRepo) 
+	workoutUC := usecase.NewWorkoutUsecase(workoutRepo)
+
 	todoCtl := controller.NewTodoController(cfg, todoUC)
 	userCtl := controller.NewUserController(cfg, userUC)
+	workoutCtl := controller.NewWorkoutController(cfg, workoutUC)
 
-	e := router.NewRouter(cfg, gdb, todoCtl, userCtl)
+	e := router.NewRouter(cfg, gdb, todoCtl, userCtl, workoutCtl)
 
 	e.Logger.Fatal(e.Start(cfg.Addr))	
 }
+
+
+
