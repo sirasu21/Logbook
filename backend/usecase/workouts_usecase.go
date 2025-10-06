@@ -114,7 +114,7 @@ func (u *workoutUsecase) Delete(ctx context.Context, workoutID, userID string) e
 // 共通 NotFound 判定
 
 func IsNotFound(err error) bool {
-	return errors.Is(err, ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound)
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 // internal helpers ----------------------------------------------------------

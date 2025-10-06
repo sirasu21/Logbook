@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoController, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController) *echo.Echo {
+func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController) *echo.Echo {
 	e := echo.New()
 	store := sessions.NewCookieStore([]byte("super-secret-key"))
 	store.Options = &sessions.Options{
@@ -45,11 +45,7 @@ func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoControlle
 	api := e.Group("/api")
 	api.GET("/me", userCtl.Me)
 
-	// authが必要
-	api.GET("/todos", todoCtl.GetTodos)
-	api.POST("/todos", todoCtl.CreateTodo)
-	api.PUT("/todos/:id", todoCtl.UpdateTodo)
-	api.DELETE("/todos/:id", todoCtl.DeleteTodo)
+	
 
 	api.POST("/workouts", workoutCtl.CreateWorkout)
 	api.PATCH("/workouts/:id", workoutCtl.UpdateWorkout)
