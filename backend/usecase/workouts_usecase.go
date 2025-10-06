@@ -37,8 +37,8 @@ func NewWorkoutUsecase(repo repository.WorkoutRepository, setRepo repository.Wor
 }
 
 func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.CreateWorkoutInput) (*models.Workout, error) {
-	if userID == "" {
-		return nil, errors.New("unauthorized")
+	if err := ensureUserID(userID); err != nil {
+		return nil, err
 	}
 	// 最小バリデーション（startedAt 必須）
 	if in.StartedAt.IsZero() {
@@ -61,6 +61,9 @@ func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.Cr
 // backend/usecase/workout_usecase.go
 func (u *workoutUsecase) End(ctx context.Context, workoutID string, userID string, endedAt time.Time) (*models.Workout, error) {
 	// 1) 本人のレコードか確認
+	if err := ensureUserID(userID); err != nil {
+		return nil, err
+	}
 	if _, err := u.repo.FindByIDForUser(ctx, workoutID, userID); err != nil {
 		return nil, err
 	}
@@ -75,18 +78,13 @@ func (u *workoutUsecase) ListByUser(ctx context.Context, userID string, f Workou
 }
 
 func (u *workoutUsecase) GetDetail(ctx context.Context, userID string, workoutID string) (*models.WorkoutDetail, error) {
-	w, err := u.repo.FindByIDAndUser(ctx, workoutID, userID)
+	w, err := u.ensureWorkout(ctx, workoutID, userID)
 	if err != nil {
 		return nil, err // gorm.ErrRecordNotFound なら 404 に相当
 	}
 	sets, err := u.repo.ListSetsByWorkout(ctx, workoutID)
 	if err != nil {
 		return nil, err
-	}
-
-	// 念のため所有者一致を保険でチェック（二重チェック）
-	if w.UserID != userID {
-		return nil, errors.New("forbidden")
 	}
 
 	return &models.WorkoutDetail{
@@ -96,9 +94,53 @@ func (u *workoutUsecase) GetDetail(ctx context.Context, userID string, workoutID
 }
 
 func (u *workoutUsecase) Update(ctx context.Context, workoutID, userID string, in models.UpdateWorkoutInput) (*models.Workout, error) {
-	if userID == "" {
-		return nil, errors.New("unauthorized")
+	if err := ensureUserID(userID); err != nil {
+		return nil, err
 	}
+	updates := collectWorkoutUpdates(in)
+	return u.repo.UpdateWorkoutByIDAndUser(ctx, workoutID, userID, updates)
+}
+
+func (u *workoutUsecase) Delete(ctx context.Context, workoutID, userID string) error {
+	if _, err := u.ensureWorkout(ctx, workoutID, userID); err != nil {
+		return err
+	}
+	if err := u.setRepo.DeleteByWorkoutID(ctx, workoutID); err != nil {
+		return err
+	}
+	return u.repo.DeleteWorkoutByIDAndUser(ctx, workoutID, userID)
+}
+
+// 共通 NotFound 判定
+
+func IsNotFound(err error) bool {
+	return errors.Is(err, ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound)
+}
+
+// internal helpers ----------------------------------------------------------
+
+func ensureUserID(userID string) error {
+	if userID == "" {
+		return errors.New("unauthorized")
+	}
+	return nil
+}
+
+func (u *workoutUsecase) ensureWorkout(ctx context.Context, workoutID, userID string) (*models.Workout, error) {
+	if err := ensureUserID(userID); err != nil {
+		return nil, err
+	}
+	w, err := u.repo.FindByIDAndUser(ctx, workoutID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if w == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return w, nil
+}
+
+func collectWorkoutUpdates(in models.UpdateWorkoutInput) map[string]any {
 	updates := make(map[string]any)
 	if in.StartedAt != nil {
 		updates["started_at"] = *in.StartedAt
@@ -114,24 +156,5 @@ func (u *workoutUsecase) Update(ctx context.Context, workoutID, userID string, i
 			updates["note"] = note
 		}
 	}
-	return u.repo.UpdateWorkoutByIDAndUser(ctx, workoutID, userID, updates)
-}
-
-func (u *workoutUsecase) Delete(ctx context.Context, workoutID, userID string) error {
-	if userID == "" {
-		return errors.New("unauthorized")
-	}
-	if _, err := u.repo.FindByIDAndUser(ctx, workoutID, userID); err != nil {
-		return err
-	}
-	if err := u.setRepo.DeleteByWorkoutID(ctx, workoutID); err != nil {
-		return err
-	}
-	return u.repo.DeleteWorkoutByIDAndUser(ctx, workoutID, userID)
-}
-
-// 共通 NotFound 判定
-
-func IsNotFound(err error) bool {
-	return errors.Is(err, ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound)
+	return updates
 }

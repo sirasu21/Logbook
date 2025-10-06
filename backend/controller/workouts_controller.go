@@ -40,9 +40,9 @@ func (h *workoutController) currentUserID(c echo.Context) string {
 }
 
 func (h *workoutController) CreateWorkout(c echo.Context) error {
-	userID := h.currentUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusUnauthorized) // 401
+	userID, ok := h.requireUserID(c)
+	if !ok {
+		return nil
 	}
 
 	var in models.CreateWorkoutInput
@@ -60,14 +60,14 @@ func (h *workoutController) CreateWorkout(c echo.Context) error {
 
 // backend/controller/workout_controller.go
 func (h *workoutController) EndWorkout(c echo.Context) error {
-	userID := h.currentUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusUnauthorized)
+	userID, ok := h.requireUserID(c)
+	if !ok {
+		return nil
 	}
 
-	workoutID := c.Param("id") // /api/workouts/:id/end みたいなルート想定
-	if workoutID == "" {
-		return c.String(http.StatusBadRequest, "missing workout ID")
+	workoutID, ok := requirePathID(c, "id", "missing workout ID")
+	if !ok {
+		return nil
 	}
 
 	var in struct {
@@ -88,57 +88,20 @@ func (h *workoutController) EndWorkout(c echo.Context) error {
 }
 
 func (h *workoutController) ListWorkouts(c echo.Context) error {
-	userID := h.currentUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusUnauthorized)
+	userID, ok := h.requireUserID(c)
+	if !ok {
+		return nil
 	}
 
-	var (
-		fromStr   = c.QueryParam("from")
-		toStr     = c.QueryParam("to")
-		limitStr  = c.QueryParam("limit")
-		offsetStr = c.QueryParam("offset")
-	)
-
-	var fromPtr, toPtr *time.Time
-	if fromStr != "" {
-		t, err := time.Parse(time.RFC3339, fromStr)
-		if err != nil {
-			return c.String(http.StatusBadRequest, "invalid 'from' (RFC3339)")
-		}
-		fromPtr = &t
-	}
-	if toStr != "" {
-		t, err := time.Parse(time.RFC3339, toStr)
-		if err != nil {
-			return c.String(http.StatusBadRequest, "invalid 'to' (RFC3339)")
-		}
-		toPtr = &t
-	}
-	limit := 20
-	offset := 0
-	if limitStr != "" {
-		if v, err := strconv.Atoi(limitStr); err != nil || v < 1 || v > 200 {
-			return c.String(http.StatusBadRequest, "invalid 'limit'")
-		} else {
-			limit = v
-		}
-	}
-	if offsetStr != "" {
-		if v, err := strconv.Atoi(offsetStr); err != nil || v < 0 {
-			return c.String(http.StatusBadRequest, "invalid 'offset'")
-		} else {
-			offset = v
-		}
-	}
-	if fromPtr != nil && toPtr != nil && fromPtr.After(*toPtr) {
-		return c.String(http.StatusBadRequest, "'from' must be <= 'to'")
+	filter, ok := parseListFilter(c)
+	if !ok {
+		return nil
 	}
 
 	items, total, err := h.uc.ListByUser(
 		c.Request().Context(),
 		userID,
-		usecase.WorkoutListFilter{From: fromPtr, To: toPtr, Limit: limit, Offset: offset},
+		filter,
 	)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
@@ -151,18 +114,18 @@ func (h *workoutController) ListWorkouts(c echo.Context) error {
 		Offset int              `json:"offset"`
 	}
 	return c.JSON(http.StatusOK, response{
-		Items: items, Total: total, Limit: limit, Offset: offset,
+		Items: items, Total: total, Limit: filter.Limit, Offset: filter.Offset,
 	})
 }
 
 func (h *workoutController) GetWorkoutDetail(c echo.Context) error {
-	userID := h.currentUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusUnauthorized)
+	userID, ok := h.requireUserID(c)
+	if !ok {
+		return nil
 	}
-	workoutID := c.Param("id")
-	if workoutID == "" {
-		return c.String(http.StatusBadRequest, "missing id")
+	workoutID, ok := requirePathID(c, "id", "missing id")
+	if !ok {
+		return nil
 	}
 
 	detail, err := h.uc.GetDetail(c.Request().Context(), userID, workoutID)
@@ -174,13 +137,13 @@ func (h *workoutController) GetWorkoutDetail(c echo.Context) error {
 }
 
 func (h *workoutController) UpdateWorkout(c echo.Context) error {
-	userID := h.currentUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusUnauthorized)
+	userID, ok := h.requireUserID(c)
+	if !ok {
+		return nil
 	}
-	workoutID := c.Param("id")
-	if workoutID == "" {
-		return c.String(http.StatusBadRequest, "missing id")
+	workoutID, ok := requirePathID(c, "id", "missing id")
+	if !ok {
+		return nil
 	}
 	var in models.UpdateWorkoutInput
 	if err := c.Bind(&in); err != nil {
@@ -197,13 +160,13 @@ func (h *workoutController) UpdateWorkout(c echo.Context) error {
 }
 
 func (h *workoutController) DeleteWorkout(c echo.Context) error {
-	userID := h.currentUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusUnauthorized)
+	userID, ok := h.requireUserID(c)
+	if !ok {
+		return nil
 	}
-	workoutID := c.Param("id")
-	if workoutID == "" {
-		return c.String(http.StatusBadRequest, "missing id")
+	workoutID, ok := requirePathID(c, "id", "missing id")
+	if !ok {
+		return nil
 	}
 	if err := h.uc.Delete(c.Request().Context(), workoutID, userID); err != nil {
 		if usecase.IsNotFound(err) {
@@ -212,4 +175,72 @@ func (h *workoutController) DeleteWorkout(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+// Shared helpers ------------------------------------------------------------
+
+func (h *workoutController) requireUserID(c echo.Context) (string, bool) {
+	userID := h.currentUserID(c)
+	if userID == "" {
+		c.NoContent(http.StatusUnauthorized)
+		return "", false
+	}
+	return userID, true
+}
+
+func requirePathID(c echo.Context, key string, missingMsg string) (string, bool) {
+	id := c.Param(key)
+	if id == "" {
+		c.String(http.StatusBadRequest, missingMsg)
+		return "", false
+	}
+	return id, true
+}
+
+func parseListFilter(c echo.Context) (usecase.WorkoutListFilter, bool) {
+	var filter usecase.WorkoutListFilter
+
+	if v := c.QueryParam("from"); v != "" {
+		tp, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			c.String(http.StatusBadRequest, "invalid 'from' (RFC3339)")
+			return filter, false
+		}
+		filter.From = &tp
+	}
+	if v := c.QueryParam("to"); v != "" {
+		tp, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			c.String(http.StatusBadRequest, "invalid 'to' (RFC3339)")
+			return filter, false
+		}
+		filter.To = &tp
+	}
+	if filter.From != nil && filter.To != nil && filter.From.After(*filter.To) {
+		c.String(http.StatusBadRequest, "'from' must be <= 'to'")
+		return filter, false
+	}
+
+	filter.Limit = 20
+	filter.Offset = 0
+
+	if v := c.QueryParam("limit"); v != "" {
+		parsed, err := strconv.Atoi(v)
+		if err != nil || parsed < 1 || parsed > 200 {
+			c.String(http.StatusBadRequest, "invalid 'limit'")
+			return filter, false
+		}
+		filter.Limit = parsed
+	}
+
+	if v := c.QueryParam("offset"); v != "" {
+		parsed, err := strconv.Atoi(v)
+		if err != nil || parsed < 0 {
+			c.String(http.StatusBadRequest, "invalid 'offset'")
+			return filter, false
+		}
+		filter.Offset = parsed
+	}
+
+	return filter, true
 }
