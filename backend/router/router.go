@@ -14,72 +14,66 @@ import (
 	"gorm.io/gorm"
 )
 
-
-    func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoController, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController) *echo.Echo {
-        e := echo.New()
-        store := sessions.NewCookieStore([]byte("super-secret-key")) 
-	    store.Options = &sessions.Options{
+func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoController, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController) *echo.Echo {
+	e := echo.New()
+	store := sessions.NewCookieStore([]byte("super-secret-key"))
+	store.Options = &sessions.Options{
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, 
+		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		MaxAge: 86400, 
-	    }
-	    e.Use(echoSession.Middleware(store))
-        e.HideBanner = true
+		MaxAge:   86400,
+	}
+	e.Use(echoSession.Middleware(store))
+	e.HideBanner = true
 
-        e.Pre(middleware.RemoveTrailingSlash())
-        e.Use(middleware.Recover())
-        e.Use(middleware.RequestID())
+	e.Pre(middleware.RemoveTrailingSlash())
+	e.Use(middleware.Recover())
+	e.Use(middleware.RequestID())
 
-        e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-            AllowOrigins:     []string{cfg.FrontendOrigin},
-            AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
-            AllowHeaders:     []string{"Content-Type", "Authorization", "X-Debug-User"},
-            AllowCredentials: true,
-        }))
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:     []string{cfg.FrontendOrigin},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+		AllowHeaders:     []string{"Content-Type", "Authorization", "X-Debug-User"},
+		AllowCredentials: true,
+	}))
 
-        
+	e.GET("/healthz", userCtl.Healthz)
+	e.GET("/api/auth/line/login", userCtl.LineLogin)
+	e.GET("/api/auth/line/callback", userCtl.LineCallback)
 
-        e.GET("/healthz", userCtl.Healthz)
-        e.GET("/api/auth/line/login",    userCtl.LineLogin)
-        e.GET("/api/auth/line/callback", userCtl.LineCallback)
+	api := e.Group("/api")
+	api.GET("/me", userCtl.Me)
 
+	// authが必要
+	api.GET("/todos", todoCtl.GetTodos)
+	api.POST("/todos", todoCtl.CreateTodo)
+	api.PUT("/todos/:id", todoCtl.UpdateTodo)
+	api.DELETE("/todos/:id", todoCtl.DeleteTodo)
 
-        
+	api.POST("/workouts", workoutCtl.CreateWorkout)
+	api.PATCH("/workouts/:id", workoutCtl.UpdateWorkout)
+	api.PATCH("/workouts/:id/end", workoutCtl.EndWorkout)
+	api.DELETE("/workouts/:id", workoutCtl.DeleteWorkout)
+	api.GET("/workouts", workoutCtl.ListWorkouts)
+	api.GET("/workouts/:id", workoutCtl.GetWorkout)
+	api.GET("/workouts/:id/detail", workoutCtl.GetWorkoutDetail)
 
-        api := e.Group("/api")
-        api.GET("/me", userCtl.Me)
+	// 既存の api := e.Group("/api") の下あたりに追記
+	api.POST("/workouts/:workoutId/sets", workoutSetCtl.AddSet)
+	api.PATCH("/workout_sets/:setId", workoutSetCtl.UpdateSet)
+	api.DELETE("/workout_sets/:setId", workoutSetCtl.DeleteSet)
 
-        // authが必要
-        api.GET("/todos", todoCtl.GetTodos)
-        api.POST("/todos", todoCtl.CreateTodo)
-        api.PUT("/todos/:id",  todoCtl.UpdateTodo)
-        api.DELETE("/todos/:id", todoCtl.DeleteTodo)
+	e.GET("/api/logout", userCtl.Logout)
 
-        api.POST("/workouts", workoutCtl.CreateWorkout)
-        api.PATCH("/workouts/:id/end", workoutCtl.EndWorkout) 
-        api.GET("/workouts", workoutCtl.ListWorkouts)
-        api.GET("/workouts/:id", workoutCtl.GetWorkout)
-        api.GET("/workouts/:id/detail", workoutCtl.GetWorkoutDetail)
-        
+	e.Any("/*", func(c echo.Context) error {
+		if strings.HasPrefix(c.Request().URL.Path, "/api/") {
+			return echo.NewHTTPError(http.StatusNotFound, "not found")
+		}
+		target := cfg.FrontendOrigin + "/"
+		log.Printf("fallback '/': redirecting to %s", target)
+		return c.Redirect(http.StatusFound, target)
+	})
 
-        // 既存の api := e.Group("/api") の下あたりに追記
-        api.POST("/workouts/:workoutId/sets", workoutSetCtl.AddSet)
-        api.PATCH("/workout_sets/:setId",     workoutSetCtl.UpdateSet)
-        api.DELETE("/workout_sets/:setId",    workoutSetCtl.DeleteSet)
-        
-
-        e.GET("/api/logout", userCtl.Logout)
-
-        e.Any("/*", func(c echo.Context) error {
-            if strings.HasPrefix(c.Request().URL.Path, "/api/") {
-                return echo.NewHTTPError(http.StatusNotFound, "not found")
-            }
-            target := cfg.FrontendOrigin + "/"
-            log.Printf("fallback '/': redirecting to %s", target)
-            return c.Redirect(http.StatusFound, target)
-        })
-
-        return e
-    }
+	return e
+}

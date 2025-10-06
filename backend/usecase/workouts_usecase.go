@@ -3,10 +3,12 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/sirasu21/Logbook/backend/models"
 	"github.com/sirasu21/Logbook/backend/repository"
+	"gorm.io/gorm"
 )
 
 type WorkoutUsecase interface {
@@ -14,7 +16,8 @@ type WorkoutUsecase interface {
 	End(ctx context.Context, workoutID string, userID string, endedAt time.Time) (*models.Workout, error)
 	ListByUser(ctx context.Context, userID string, f WorkoutListFilter) ([]models.Workout, int, error)
 	GetDetail(ctx context.Context, userID string, workoutID string) (*models.WorkoutDetail, error)
-	
+	Update(ctx context.Context, workoutID, userID string, in models.UpdateWorkoutInput) (*models.Workout, error)
+	Delete(ctx context.Context, workoutID, userID string) error
 }
 
 type WorkoutListFilter struct {
@@ -25,11 +28,12 @@ type WorkoutListFilter struct {
 }
 
 type workoutUsecase struct {
-	repo repository.WorkoutRepository
+	repo    repository.WorkoutRepository
+	setRepo repository.WorkoutSetRepository
 }
 
-func NewWorkoutUsecase(repo repository.WorkoutRepository) WorkoutUsecase {
-	return &workoutUsecase{repo: repo}	
+func NewWorkoutUsecase(repo repository.WorkoutRepository, setRepo repository.WorkoutSetRepository) WorkoutUsecase {
+	return &workoutUsecase{repo: repo, setRepo: setRepo}
 }
 
 func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.CreateWorkoutInput) (*models.Workout, error) {
@@ -53,7 +57,6 @@ func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.Cr
 	}
 	return w, nil
 }
-
 
 // backend/usecase/workout_usecase.go
 func (u *workoutUsecase) End(ctx context.Context, workoutID string, userID string, endedAt time.Time) (*models.Workout, error) {
@@ -91,8 +94,44 @@ func (u *workoutUsecase) GetDetail(ctx context.Context, userID string, workoutID
 		Sets:    sets,
 	}, nil
 }
+
+func (u *workoutUsecase) Update(ctx context.Context, workoutID, userID string, in models.UpdateWorkoutInput) (*models.Workout, error) {
+	if userID == "" {
+		return nil, errors.New("unauthorized")
+	}
+	updates := make(map[string]any)
+	if in.StartedAt != nil {
+		updates["started_at"] = *in.StartedAt
+	}
+	if in.EndedAt != nil {
+		updates["ended_at"] = in.EndedAt
+	}
+	if in.Note != nil {
+		note := strings.TrimSpace(*in.Note)
+		if note == "" {
+			updates["note"] = nil
+		} else {
+			updates["note"] = note
+		}
+	}
+	return u.repo.UpdateWorkoutByIDAndUser(ctx, workoutID, userID, updates)
+}
+
+func (u *workoutUsecase) Delete(ctx context.Context, workoutID, userID string) error {
+	if userID == "" {
+		return errors.New("unauthorized")
+	}
+	if _, err := u.repo.FindByIDAndUser(ctx, workoutID, userID); err != nil {
+		return err
+	}
+	if err := u.setRepo.DeleteByWorkoutID(ctx, workoutID); err != nil {
+		return err
+	}
+	return u.repo.DeleteWorkoutByIDAndUser(ctx, workoutID, userID)
+}
+
 // 共通 NotFound 判定
 
 func IsNotFound(err error) bool {
-	return errors.Is(err, ErrNotFound)
+	return errors.Is(err, ErrNotFound) || errors.Is(err, gorm.ErrRecordNotFound)
 }

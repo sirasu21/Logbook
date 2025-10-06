@@ -19,6 +19,8 @@ type WorkoutRepository interface {
 	FindByID(ctx context.Context, id string) (*models.Workout, error)
 	FindByIDAndUser(ctx context.Context, workoutID string, userID string) (*models.Workout, error)
 	ListSetsByWorkout(ctx context.Context, workoutID string) ([]models.WorkoutSet, error)
+	UpdateWorkoutByIDAndUser(ctx context.Context, workoutID, userID string, values map[string]any) (*models.Workout, error)
+	DeleteWorkoutByIDAndUser(ctx context.Context, workoutID, userID string) error
 }
 
 type WorkoutQuery struct {
@@ -65,7 +67,6 @@ func (r *workoutRepository) UpdateEndedAt(ctx context.Context, workoutID string,
 	}
 	return &w, nil
 }
-
 
 func (r *workoutRepository) FindWorkoutsByUser(ctx context.Context, userID string, q WorkoutQuery) ([]models.Workout, int, error) {
 	tx := r.db.WithContext(ctx).Model(&models.Workout{}).Where("user_id = ?", userID)
@@ -141,4 +142,23 @@ func (r *workoutRepository) ListSetsByWorkout(ctx context.Context, workoutID str
 		return nil, err
 	}
 	return sets, nil
+}
+
+func (r *workoutRepository) UpdateWorkoutByIDAndUser(ctx context.Context, workoutID, userID string, values map[string]any) (*models.Workout, error) {
+	if len(values) == 0 {
+		return r.FindByIDAndUser(ctx, workoutID, userID)
+	}
+	if err := r.db.WithContext(ctx).
+		Model(&models.Workout{}).
+		Where("id = ? AND user_id = ?", workoutID, userID).
+		Updates(values).Error; err != nil {
+		return nil, err
+	}
+	return r.FindByIDAndUser(ctx, workoutID, userID)
+}
+
+func (r *workoutRepository) DeleteWorkoutByIDAndUser(ctx context.Context, workoutID, userID string) error {
+	return r.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", workoutID, userID).
+		Delete(&models.Workout{}).Error
 }

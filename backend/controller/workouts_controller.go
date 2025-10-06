@@ -18,12 +18,13 @@ type WorkoutController interface {
 	ListWorkouts(c echo.Context) error
 	GetWorkout(c echo.Context) error
 	GetWorkoutDetail(c echo.Context) error
-	
+	UpdateWorkout(c echo.Context) error
+	DeleteWorkout(c echo.Context) error
 }
 
 type workoutController struct {
 	cfg models.Config
-	uc usecase.WorkoutUsecase
+	uc  usecase.WorkoutUsecase
 }
 
 func NewWorkoutController(cfg models.Config, uc usecase.WorkoutUsecase) WorkoutController {
@@ -94,10 +95,10 @@ func (h *workoutController) ListWorkouts(c echo.Context) error {
 	}
 
 	var (
-		fromStr  = c.QueryParam("from")
-		toStr    = c.QueryParam("to")
-		limitStr = c.QueryParam("limit")
-		offsetStr= c.QueryParam("offset")
+		fromStr   = c.QueryParam("from")
+		toStr     = c.QueryParam("to")
+		limitStr  = c.QueryParam("limit")
+		offsetStr = c.QueryParam("offset")
 	)
 
 	var fromPtr, toPtr *time.Time
@@ -192,4 +193,45 @@ func (h *workoutController) GetWorkoutDetail(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found")
 	}
 	return c.JSON(http.StatusOK, detail)
+}
+
+func (h *workoutController) UpdateWorkout(c echo.Context) error {
+	userID := h.currentUserID(c)
+	if userID == "" {
+		return c.NoContent(http.StatusUnauthorized)
+	}
+	workoutID := c.Param("id")
+	if workoutID == "" {
+		return c.String(http.StatusBadRequest, "missing id")
+	}
+	var in models.UpdateWorkoutInput
+	if err := c.Bind(&in); err != nil {
+		return c.String(http.StatusBadRequest, "invalid body")
+	}
+	w, err := h.uc.Update(c.Request().Context(), workoutID, userID, in)
+	if err != nil {
+		if usecase.IsNotFound(err) {
+			return c.NoContent(http.StatusNotFound)
+		}
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, w)
+}
+
+func (h *workoutController) DeleteWorkout(c echo.Context) error {
+	userID := h.currentUserID(c)
+	if userID == "" {
+		return c.NoContent(http.StatusUnauthorized)
+	}
+	workoutID := c.Param("id")
+	if workoutID == "" {
+		return c.String(http.StatusBadRequest, "missing id")
+	}
+	if err := h.uc.Delete(c.Request().Context(), workoutID, userID); err != nil {
+		if usecase.IsNotFound(err) {
+			return c.NoContent(http.StatusNotFound)
+		}
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.NoContent(http.StatusNoContent)
 }

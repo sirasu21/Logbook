@@ -16,6 +16,12 @@ type Workout struct {
 }
 
 type CreateWorkoutInput struct {
-	StartedAt time.Time `json:"startedAt"`            // 必須（RFC3339）
-	Note      *string   `json:"note,omitempty"`       // 任意
+	StartedAt time.Time `json:"startedAt"`      // 必須（RFC3339）
+	Note      *string   `json:"note,omitempty"` // 任意
+}
+
+type UpdateWorkoutInput struct {
+	StartedAt *time.Time `json:"startedAt,omitempty"`
+	EndedAt   *time.Time `json:"endedAt,omitempty"`
+	Note      *string    `json:"note,omitempty"`
 }

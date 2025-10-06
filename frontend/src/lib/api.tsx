@@ -65,6 +65,12 @@ export type WorkoutDetail = {
   sets: WorkoutSet[];
 };
 
+export type UpdateWorkoutInput = {
+  note?: string | null;
+  startedAt?: string;
+  endedAt?: string | null;
+};
+
 export type CreateWorkoutSetInput = {
   exerciseId: string;
   setIndex?: number;
@@ -132,6 +138,13 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(endedAt ? { endedAt } : {}),
     }),
+  updateWorkout: (id: string, input: UpdateWorkoutInput) =>
+    jfetch<Workout>(`/api/workouts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  deleteWorkout: (id: string) =>
+    jfetch<void>(`/api/workouts/${id}`, { method: "DELETE" }),
   getWorkoutDetail: (id: string) =>
     jfetch<WorkoutDetail>(`/api/workouts/${id}/detail`),
   addWorkoutSet: (workoutId: string, input: CreateWorkoutSetInput) =>

@@ -13,6 +13,7 @@ type WorkoutSetRepository interface {
 	Create(ctx context.Context, ws *models.WorkoutSet) error
 	Update(ctx context.Context, ws *models.WorkoutSet) error
 	Delete(ctx context.Context, id string) error
+	DeleteByWorkoutID(ctx context.Context, workoutID string) error
 }
 
 type workoutSetRepository struct {
@@ -44,4 +45,8 @@ func (r *workoutSetRepository) Update(ctx context.Context, ws *models.WorkoutSet
 
 func (r *workoutSetRepository) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Delete(&models.WorkoutSet{}, "id = ?", id).Error
+}
+
+func (r *workoutSetRepository) DeleteByWorkoutID(ctx context.Context, workoutID string) error {
+	return r.db.WithContext(ctx).Delete(&models.WorkoutSet{}, "workout_id = ?", workoutID).Error
 }
