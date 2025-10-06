@@ -62,6 +62,7 @@ import (
         api.GET("/workouts", workoutCtl.ListWorkouts)
         api.GET("/workouts/:id", workoutCtl.GetWorkout)
         api.GET("/workouts/:id/detail", workoutCtl.GetWorkoutDetail)
+        
 
         // 既存の api := e.Group("/api") の下あたりに追記
         api.POST("/workouts/:workoutId/sets", workoutSetCtl.AddSet)

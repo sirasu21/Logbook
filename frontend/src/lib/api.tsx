@@ -43,6 +43,53 @@ export type WorkoutList = {
   offset: number;
 };
 
+export type WorkoutSet = {
+  id: string;
+  workoutId: string;
+  exerciseId: string;
+  setIndex: number;
+  reps?: number;
+  weightKg?: number;
+  rpe?: number;
+  restSec?: number;
+  note?: string;
+  durationSec?: number;
+  distanceM?: number;
+  isWarmup: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkoutDetail = {
+  workout: Workout;
+  sets: WorkoutSet[];
+};
+
+export type CreateWorkoutSetInput = {
+  exerciseId: string;
+  setIndex?: number;
+  reps?: number;
+  weightKg?: number;
+  rpe?: number;
+  restSec?: number;
+  note?: string;
+  durationSec?: number;
+  distanceM?: number;
+  isWarmup?: boolean;
+};
+
+export type UpdateWorkoutSetInput = {
+  setIndex?: number;
+  reps?: number;
+  weightKg?: number;
+  rpe?: number;
+  restSec?: number;
+  note?: string;
+  durationSec?: number;
+  distanceM?: number;
+  isWarmup?: boolean;
+};
+
 export const api = {
   me: () => jfetch<Me>("/api/me"),
   listTodos: () => jfetch<Todo[]>("/api/todos"),
@@ -85,4 +132,18 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(endedAt ? { endedAt } : {}),
     }),
+  getWorkoutDetail: (id: string) =>
+    jfetch<WorkoutDetail>(`/api/workouts/${id}/detail`),
+  addWorkoutSet: (workoutId: string, input: CreateWorkoutSetInput) =>
+    jfetch<WorkoutSet>(`/api/workouts/${workoutId}/sets`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateWorkoutSet: (setId: string, input: UpdateWorkoutSetInput) =>
+    jfetch<WorkoutSet>(`/api/workout_sets/${setId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  deleteWorkoutSet: (setId: string) =>
+    jfetch<void>(`/api/workout_sets/${setId}`, { method: "DELETE" }),
 };
