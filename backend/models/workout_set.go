@@ -25,3 +25,30 @@ type WorkoutSet struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
+
+
+type WorkoutSetCreateInput struct {
+	ExerciseID  string   `json:"exerciseId"  validate:"required,uuid4"`
+	SetIndex    int      `json:"setIndex"` // 0なら repoで自動採番でもOK
+	Reps        *int     `json:"reps,omitempty"`
+	WeightKg    *float32 `json:"weightKg,omitempty"`
+	RPE         *float32 `json:"rpe,omitempty"`
+	IsWarmup    bool     `json:"isWarmup"`
+	RestSec     *int     `json:"restSec,omitempty"`
+	Note        *string  `json:"note,omitempty"`
+	DurationSec *int     `json:"durationSec,omitempty"`
+	DistanceM   *float32 `json:"distanceM,omitempty"`
+}
+
+type WorkoutSetUpdateInput struct {
+	SetIndex    *int     `json:"setIndex,omitempty"`
+	Reps        *int     `json:"reps,omitempty"`
+	WeightKg    *float32 `json:"weightKg,omitempty"`
+	RPE        *float32 `json:"rpe,omitempty"`
+	IsWarmup    *bool    `json:"isWarmup,omitempty"`
+	RestSec     *int     `json:"restSec,omitempty"`
+	Note        *string  `json:"note,omitempty"`
+	DurationSec *int     `json:"durationSec,omitempty"`
+	DistanceM   *float32 `json:"distanceM,omitempty"`
+}
+

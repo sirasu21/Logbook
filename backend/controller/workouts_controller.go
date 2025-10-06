@@ -17,6 +17,8 @@ type WorkoutController interface {
 	EndWorkout(c echo.Context) error
 	ListWorkouts(c echo.Context) error
 	GetWorkout(c echo.Context) error
+	GetWorkoutDetail(c echo.Context) error
+	
 }
 
 type workoutController struct {
@@ -172,4 +174,22 @@ func (h *workoutController) GetWorkout(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, w)
+}
+
+func (h *workoutController) GetWorkoutDetail(c echo.Context) error {
+	userID := h.currentUserID(c)
+	if userID == "" {
+		return c.NoContent(http.StatusUnauthorized)
+	}
+	workoutID := c.Param("id")
+	if workoutID == "" {
+		return c.String(http.StatusBadRequest, "missing id")
+	}
+
+	detail, err := h.uc.GetDetail(c.Request().Context(), userID, workoutID)
+	if err != nil {
+		// gorm.ErrRecordNotFound や forbidden 相当なら 404/403 に振り分けてもOK
+		return c.String(http.StatusNotFound, "not found")
+	}
+	return c.JSON(http.StatusOK, detail)
 }

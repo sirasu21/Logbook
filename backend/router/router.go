@@ -15,7 +15,7 @@ import (
 )
 
 
-    func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoController, userCtl controller.UserController, workoutCtl controller.WorkoutController) *echo.Echo {
+    func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoController, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController) *echo.Echo {
         e := echo.New()
         store := sessions.NewCookieStore([]byte("super-secret-key")) 
 	    store.Options = &sessions.Options{
@@ -34,7 +34,7 @@ import (
 
         e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
             AllowOrigins:     []string{cfg.FrontendOrigin},
-            AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+            AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
             AllowHeaders:     []string{"Content-Type", "Authorization", "X-Debug-User"},
             AllowCredentials: true,
         }))
@@ -44,6 +44,8 @@ import (
         e.GET("/healthz", userCtl.Healthz)
         e.GET("/api/auth/line/login",    userCtl.LineLogin)
         e.GET("/api/auth/line/callback", userCtl.LineCallback)
+
+
         
 
         api := e.Group("/api")
@@ -59,6 +61,13 @@ import (
         api.PATCH("/workouts/:id/end", workoutCtl.EndWorkout) 
         api.GET("/workouts", workoutCtl.ListWorkouts)
         api.GET("/workouts/:id", workoutCtl.GetWorkout)
+        api.GET("/workouts/:id/detail", workoutCtl.GetWorkoutDetail)
+
+        // 既存の api := e.Group("/api") の下あたりに追記
+        api.POST("/workouts/:workoutId/sets", workoutSetCtl.AddSet)
+        api.PATCH("/workout_sets/:setId",     workoutSetCtl.UpdateSet)
+        api.DELETE("/workout_sets/:setId",    workoutSetCtl.DeleteSet)
+        
 
         e.GET("/api/logout", userCtl.Logout)
 

@@ -4,9 +4,8 @@ import (
 	"context"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/sirasu21/Logbook/backend/models"
+	"gorm.io/gorm"
 )
 
 type WorkoutRepository interface {
@@ -17,6 +16,9 @@ type WorkoutRepository interface {
 	UpdateEndedAt(ctx context.Context, workoutID string, endedAt time.Time) (*models.Workout, error)
 	FindWorkoutsByUser(ctx context.Context, userID string, q WorkoutQuery) ([]models.Workout, int, error)
 	FindWorkoutByID(ctx context.Context, userID string, id string) (*models.Workout, error)
+	FindByID(ctx context.Context, id string) (*models.Workout, error)
+	FindByIDAndUser(ctx context.Context, workoutID string, userID string) (*models.Workout, error)
+	ListSetsByWorkout(ctx context.Context, workoutID string) ([]models.WorkoutSet, error)
 }
 
 type WorkoutQuery struct {
@@ -106,4 +108,37 @@ func (r *workoutRepository) FindWorkoutByID(ctx context.Context, userID string, 
 		return nil, err
 	}
 	return &w, nil
+}
+
+// repository/workout_repository.go に追記
+func (r *workoutRepository) FindByID(ctx context.Context, id string) (*models.Workout, error) {
+	var w models.Workout
+	if err := r.db.WithContext(ctx).First(&w, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &w, nil
+}
+
+func (r *workoutRepository) FindByIDAndUser(ctx context.Context, workoutID string, userID string) (*models.Workout, error) {
+	var w models.Workout
+	if err := r.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", workoutID, userID).
+		First(&w).Error; err != nil {
+		return nil, err
+	}
+	return &w, nil
+}
+
+func (r *workoutRepository) ListSetsByWorkout(ctx context.Context, workoutID string) ([]models.WorkoutSet, error) {
+	var sets []models.WorkoutSet
+	if err := r.db.WithContext(ctx).
+		Where("workout_id = ?", workoutID).
+		Order("set_index ASC, created_at ASC").
+		Find(&sets).Error; err != nil {
+		return nil, err
+	}
+	return sets, nil
 }

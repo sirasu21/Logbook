@@ -13,7 +13,8 @@ type WorkoutUsecase interface {
 	Create(ctx context.Context, userID string, in models.CreateWorkoutInput) (*models.Workout, error)
 	End(ctx context.Context, workoutID string, userID string, endedAt time.Time) (*models.Workout, error)
 	ListByUser(ctx context.Context, userID string, f WorkoutListFilter) ([]models.Workout, int, error)
-	GetDetail(ctx context.Context, userID string, workoutID string) (models.Workout, error)
+	GetDetail(ctx context.Context, userID string, workoutID string) (*models.WorkoutDetail, error)
+	
 }
 
 type WorkoutListFilter struct {
@@ -28,7 +29,7 @@ type workoutUsecase struct {
 }
 
 func NewWorkoutUsecase(repo repository.WorkoutRepository) WorkoutUsecase {
-	return &workoutUsecase{repo: repo}
+	return &workoutUsecase{repo: repo}	
 }
 
 func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.CreateWorkoutInput) (*models.Workout, error) {
@@ -70,17 +71,26 @@ func (u *workoutUsecase) ListByUser(ctx context.Context, userID string, f Workou
 	})
 }
 
-func (u *workoutUsecase) GetDetail(ctx context.Context, userID string, workoutID string) (models.Workout, error) {
-	w, err := u.repo.FindWorkoutByID(ctx, userID, workoutID)
+func (u *workoutUsecase) GetDetail(ctx context.Context, userID string, workoutID string) (*models.WorkoutDetail, error) {
+	w, err := u.repo.FindByIDAndUser(ctx, workoutID, userID)
 	if err != nil {
-		return models.Workout{}, err
+		return nil, err // gorm.ErrRecordNotFound なら 404 に相当
 	}
-	if w == nil {
-		return models.Workout{}, ErrNotFound
+	sets, err := u.repo.ListSetsByWorkout(ctx, workoutID)
+	if err != nil {
+		return nil, err
 	}
-	return *w, nil
-}
 
+	// 念のため所有者一致を保険でチェック（二重チェック）
+	if w.UserID != userID {
+		return nil, errors.New("forbidden")
+	}
+
+	return &models.WorkoutDetail{
+		Workout: *w,
+		Sets:    sets,
+	}, nil
+}
 // 共通 NotFound 判定
 
 func IsNotFound(err error) bool {
