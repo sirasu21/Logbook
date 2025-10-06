@@ -4,6 +4,7 @@ import AppShell from "./components/AppShell";
 import Header from "./components/Header";
 import NewTodoForm from "./components/NewTodoForm";
 import TodoList from "./components/TodoList";
+import WorkoutsPanel from "./components/WorkoutsPanel";
 import { api, type Me, type Todo } from "./lib/api";
 
 export default function App() {
@@ -92,6 +93,7 @@ export default function App() {
             onUpdate={updateTodo}
             onDelete={deleteTodo}
           />
+          <WorkoutsPanel />
         </>
       ) : (
         <div className="app-container">

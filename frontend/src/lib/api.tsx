@@ -27,6 +27,22 @@ export type Todo = {
   createdAt: string;
 };
 
+export type Workout = {
+  id: string;
+  userId: string;
+  startedAt: string;
+  endedAt?: string;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+export type WorkoutList = {
+  items: Workout[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export const api = {
   me: () => jfetch<Me>("/api/me"),
   listTodos: () => jfetch<Todo[]>("/api/todos"),
@@ -44,4 +60,29 @@ export const api = {
     jfetch<void>(`/api/todos/${id}`, { method: "DELETE" }),
   login: () => (window.location.href = `${backend}/api/auth/line/login`),
   logout: () => (window.location.href = `${backend}/api/logout`),
+  listWorkouts: (params?: {
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    if (params?.limit != null) q.set("limit", String(params.limit));
+    if (params?.offset != null) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    const path = qs ? `/api/workouts?${qs}` : "/api/workouts";
+    return jfetch<WorkoutList>(path);
+  },
+  createWorkout: (startedAt: string, note?: string) =>
+    jfetch<Workout>("/api/workouts", {
+      method: "POST",
+      body: JSON.stringify({ startedAt, note }),
+    }),
+  endWorkout: (id: string, endedAt?: string) =>
+    jfetch<Workout>(`/api/workouts/${id}/end`, {
+      method: "PATCH",
+      body: JSON.stringify(endedAt ? { endedAt } : {}),
+    }),
 };
