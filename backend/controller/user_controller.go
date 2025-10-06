@@ -112,10 +112,10 @@ func (h *userController) LineCallback(c echo.Context) error {
 	// ★ ここでDBへ登録/更新を確定させる（無ければ作る）
 	user, err := h.uc.EnsureUserFromLineProfile(
 		c.Request().Context(),
-		prof.UserID,          // sub
-		&prof.DisplayName,    // name
-		&prof.PictureURL,     // picture
-		nil,                  // email（必要ならLINE側から取得して渡す）
+		prof.UserID,       // sub
+		&prof.DisplayName, // name
+		&prof.PictureURL,  // picture
+		nil,               // email（必要ならLINE側から取得して渡す）
 	)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("user upsert failed: %v", err))

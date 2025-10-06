@@ -45,8 +45,6 @@ func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserControlle
 	api := e.Group("/api")
 	api.GET("/me", userCtl.Me)
 
-	
-
 	api.POST("/workouts", workoutCtl.CreateWorkout)
 	api.PATCH("/workouts/:id", workoutCtl.UpdateWorkout)
 	api.PATCH("/workouts/:id/end", workoutCtl.EndWorkout)

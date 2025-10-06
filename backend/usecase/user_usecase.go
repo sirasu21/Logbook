@@ -34,19 +34,18 @@ func (u *userUsecase) ExchangeCode(ctx context.Context, channelID, channelSecret
 	return u.authRepo.ExchangeCode(ctx, channelID, channelSecret, redirectURI, code, verifier)
 }
 
-
 func (u *userUsecase) FetchProfile(ctx context.Context, accessToken string) (models.Profile, error) {
-    rp, err := u.authRepo.FetchProfile(ctx, accessToken) // rp: repository.Profile
-    if err != nil {
-        return models.Profile{}, err
-    }
-    // repository.Profile → models.Profile へ詰め替え
-    return models.Profile{
-        UserID:        rp.UserID,
-        DisplayName:   rp.DisplayName,
-        PictureURL:    rp.PictureURL,
-        StatusMessage: rp.StatusMessage,
-    }, nil
+	rp, err := u.authRepo.FetchProfile(ctx, accessToken) // rp: repository.Profile
+	if err != nil {
+		return models.Profile{}, err
+	}
+	// repository.Profile → models.Profile へ詰め替え
+	return models.Profile{
+		UserID:        rp.UserID,
+		DisplayName:   rp.DisplayName,
+		PictureURL:    rp.PictureURL,
+		StatusMessage: rp.StatusMessage,
+	}, nil
 }
 
 func (u *userUsecase) EnsureUserFromLineProfile(ctx context.Context, sub string, displayName, pictureURL, email *string) (*models.User, error) {

@@ -19,18 +19,15 @@ func main() {
 	cfg := bot.LoadConfig()
 	gdb := db.InitDB()
 
-	
 	userRepo := repository.NewLineAuthRepository(http.DefaultClient, gdb)
 	workoutRepo := repository.NewWorkoutRepository(gdb)
 	workoutSetRepo := repository.NewWorkoutSetRepository(gdb)
 	exerciseRepo := repository.NewExerciseRepository(gdb)
 
-	
 	userUC := usecase.NewUserUsecase(userRepo)
 	workoutUC := usecase.NewWorkoutUsecase(workoutRepo, workoutSetRepo)
 	workoutSetUC := usecase.NewWorkoutSetUsecase(workoutRepo, workoutSetRepo, exerciseRepo)
 
-	
 	userCtl := controller.NewUserController(cfg, userUC)
 	workoutCtl := controller.NewWorkoutController(cfg, workoutUC)
 	workoutSetCtl := controller.NewWorkoutSetController(workoutSetUC)

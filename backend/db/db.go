@@ -12,11 +12,11 @@ import (
 
 // データベースの作成、接続
 func InitDB() *gorm.DB {
-	
-    err := godotenv.Load()
-    if err != nil {
-        log.Fatalln(err)
-	
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalln(err)
+
 	}
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", os.Getenv("POSTGRES_USER"),
 		os.Getenv("POSTGRES_PW"), os.Getenv("POSTGRES_HOST"),
@@ -29,7 +29,7 @@ func InitDB() *gorm.DB {
 	return db
 }
 
-//データベースの切断
+// データベースの切断
 func CloseDB(db *gorm.DB) {
 	sqlDB, _ := db.DB()
 	if err := sqlDB.Close(); err != nil {

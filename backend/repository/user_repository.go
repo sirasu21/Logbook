@@ -28,7 +28,10 @@ type Profile struct {
 	StatusMessage string
 }
 
-type lineAuthRepository struct{ httpClient *http.Client; db *gorm.DB }
+type lineAuthRepository struct {
+	httpClient *http.Client
+	db         *gorm.DB
+}
 
 func NewLineAuthRepository(httpClient *http.Client, db *gorm.DB) AuthRepository {
 	if httpClient == nil {
