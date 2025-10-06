@@ -15,7 +15,6 @@ type WorkoutRepository interface {
 	// ended_at を更新
 	UpdateEndedAt(ctx context.Context, workoutID string, endedAt time.Time) (*models.Workout, error)
 	FindWorkoutsByUser(ctx context.Context, userID string, q WorkoutQuery) ([]models.Workout, int, error)
-	FindWorkoutByID(ctx context.Context, userID string, id string) (*models.Workout, error)
 	FindByID(ctx context.Context, id string) (*models.Workout, error)
 	FindByIDAndUser(ctx context.Context, workoutID string, userID string) (*models.Workout, error)
 	ListSetsByWorkout(ctx context.Context, workoutID string) ([]models.WorkoutSet, error)
@@ -96,19 +95,6 @@ func (r *workoutRepository) FindWorkoutsByUser(ctx context.Context, userID strin
 		return nil, 0, err
 	}
 	return items, int(total), nil
-}
-
-func (r *workoutRepository) FindWorkoutByID(ctx context.Context, userID string, id string) (*models.Workout, error) {
-	var w models.Workout
-	if err := r.db.WithContext(ctx).
-		Where("id = ? AND user_id = ?", id, userID).
-		First(&w).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &w, nil
 }
 
 // repository/workout_repository.go に追記

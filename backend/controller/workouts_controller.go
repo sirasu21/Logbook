@@ -16,7 +16,6 @@ type WorkoutController interface {
 	CreateWorkout(c echo.Context) error
 	EndWorkout(c echo.Context) error
 	ListWorkouts(c echo.Context) error
-	GetWorkout(c echo.Context) error
 	GetWorkoutDetail(c echo.Context) error
 	UpdateWorkout(c echo.Context) error
 	DeleteWorkout(c echo.Context) error
@@ -154,27 +153,6 @@ func (h *workoutController) ListWorkouts(c echo.Context) error {
 	return c.JSON(http.StatusOK, response{
 		Items: items, Total: total, Limit: limit, Offset: offset,
 	})
-}
-
-// GET /api/workouts/:id
-func (h *workoutController) GetWorkout(c echo.Context) error {
-	userID := h.currentUserID(c)
-	if userID == "" {
-		return c.NoContent(http.StatusUnauthorized)
-	}
-	id := c.Param("id")
-	if id == "" {
-		return c.String(http.StatusBadRequest, "missing id")
-	}
-
-	w, err := h.uc.GetDetail(c.Request().Context(), userID, id)
-	if err != nil {
-		if usecase.IsNotFound(err) {
-			return c.NoContent(http.StatusNotFound)
-		}
-		return c.String(http.StatusInternalServerError, err.Error())
-	}
-	return c.JSON(http.StatusOK, w)
 }
 
 func (h *workoutController) GetWorkoutDetail(c echo.Context) error {

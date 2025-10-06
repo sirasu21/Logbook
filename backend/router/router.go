@@ -56,7 +56,6 @@ func NewRouter(cfg models.Config, gdb *gorm.DB, todoCtl controller.TodoControlle
 	api.PATCH("/workouts/:id/end", workoutCtl.EndWorkout)
 	api.DELETE("/workouts/:id", workoutCtl.DeleteWorkout)
 	api.GET("/workouts", workoutCtl.ListWorkouts)
-	api.GET("/workouts/:id", workoutCtl.GetWorkout)
 	api.GET("/workouts/:id/detail", workoutCtl.GetWorkoutDetail)
 
 	// 既存の api := e.Group("/api") の下あたりに追記
