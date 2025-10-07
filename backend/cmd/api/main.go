@@ -27,12 +27,14 @@ func main() {
 	userUC := usecase.NewUserUsecase(userRepo)
 	workoutUC := usecase.NewWorkoutUsecase(workoutRepo, workoutSetRepo)
 	workoutSetUC := usecase.NewWorkoutSetUsecase(workoutRepo, workoutSetRepo, exerciseRepo)
+	exerciseUC := usecase.NewExerciseUsecase(exerciseRepo)
 
 	userCtl := controller.NewUserController(cfg, userUC)
 	workoutCtl := controller.NewWorkoutController(cfg, workoutUC)
 	workoutSetCtl := controller.NewWorkoutSetController(workoutSetUC)
+	exerciseCtl := controller.NewExerciseController(cfg, exerciseUC)
 
-	e := router.NewRouter(cfg, gdb, userCtl, workoutCtl, workoutSetCtl)
+	e := router.NewRouter(cfg, gdb, userCtl, workoutCtl, workoutSetCtl, exerciseCtl)
 
 	e.Logger.Fatal(e.Start(cfg.Addr))
 }

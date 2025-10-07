@@ -96,6 +96,37 @@ export type UpdateWorkoutSetInput = {
   isWarmup?: boolean;
 };
 
+export type Exercise = {
+  id: string;
+  ownerUserId?: string;
+  name: string;
+  type: string;
+  primaryMuscle?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExerciseList = {
+  items: Exercise[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type CreateExerciseInput = {
+  name: string;
+  type: string;
+  primaryMuscle?: string;
+};
+
+export type UpdateExerciseInput = {
+  name?: string;
+  type?: string;
+  primaryMuscle?: string | null;
+  isActive?: boolean;
+};
+
 export const api = {
   me: () => jfetch<Me>("/api/me"),
   listTodos: () => jfetch<Todo[]>("/api/todos"),
@@ -159,4 +190,34 @@ export const api = {
     }),
   deleteWorkoutSet: (setId: string) =>
     jfetch<void>(`/api/workout_sets/${setId}`, { method: "DELETE" }),
+  listExercises: (params?: {
+    q?: string;
+    type?: string;
+    onlyMine?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.q) search.set("q", params.q);
+    if (params?.type) search.set("type", params.type);
+    if (params?.onlyMine) search.set("onlyMine", "true");
+    if (params?.limit != null) search.set("limit", String(params.limit));
+    if (params?.offset != null) search.set("offset", String(params.offset));
+    const qs = search.toString();
+    const path = qs ? `/api/exercises?${qs}` : "/api/exercises";
+    return jfetch<ExerciseList>(path);
+  },
+  getExercise: (id: string) => jfetch<Exercise>(`/api/exercises/${id}`),
+  createExercise: (input: CreateExerciseInput) =>
+    jfetch<Exercise>("/api/exercises", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateExercise: (id: string, input: UpdateExerciseInput) =>
+    jfetch<Exercise>(`/api/exercises/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  deleteExercise: (id: string) =>
+    jfetch<void>(`/api/exercises/${id}`, { method: "DELETE" }),
 };

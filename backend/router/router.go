@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController) *echo.Echo {
+func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController, exerciseCtl controller.ExerciseController) *echo.Echo {
 	e := echo.New()
 	store := sessions.NewCookieStore([]byte("super-secret-key"))
 	store.Options = &sessions.Options{
@@ -52,10 +52,16 @@ func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserControlle
 	api.GET("/workouts", workoutCtl.ListWorkouts)
 	api.GET("/workouts/:id/detail", workoutCtl.GetWorkoutDetail)
 
-	// 既存の api := e.Group("/api") の下あたりに追記
 	api.POST("/workouts/:workoutId/sets", workoutSetCtl.AddSet)
 	api.PATCH("/workout_sets/:setId", workoutSetCtl.UpdateSet)
 	api.DELETE("/workout_sets/:setId", workoutSetCtl.DeleteSet)
+
+	api.GET("/exercises", exerciseCtl.List)          // ?q=&type=&onlyMine=&limit=&offset=
+    api.GET("/exercises/:id", exerciseCtl.Get)       // 詳細（可視性チェックあり）
+    api.POST("/exercises", exerciseCtl.Create)       // 自分の独自種目を作成
+    api.PATCH("/exercises/:id", exerciseCtl.Update)  // 自分の独自種目のみ更新
+    api.DELETE("/exercises/:id", exerciseCtl.Delete) // 自分の独自種目のみ削除
+
 
 	e.GET("/api/logout", userCtl.Logout)
 

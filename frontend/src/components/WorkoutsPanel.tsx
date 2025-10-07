@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   api,
   type CreateWorkoutSetInput,
+  type Exercise,
   type UpdateWorkoutInput,
   type UpdateWorkoutSetInput,
   type Workout,
@@ -19,6 +20,33 @@ const formatDate = (iso: string) =>
 const formatDateTimeLocal = (date: Date) => {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 16);
+};
+
+const exerciseTypeLabel = (type: string) => {
+  switch (type) {
+    case "strength":
+      return "筋力";
+    case "cardio":
+      return "有酸素";
+    case "other":
+      return "その他";
+    default:
+      return type;
+  }
+};
+
+const resolveExerciseId = (
+  value: string,
+  exercises: Exercise[],
+  exerciseMap: Map<string, Exercise>
+) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const byId = exerciseMap.get(trimmed);
+  if (byId) return byId.id;
+  const byName = exercises.find((ex) => ex.name === trimmed);
+  if (byName) return byName.id;
+  return null;
 };
 
 const minutesBetween = (start: string, end?: string) => {
@@ -74,6 +102,36 @@ type SetModalState =
       form: SetFormState;
     };
 
+type ExerciseFormState = {
+  name: string;
+  type: string;
+  primaryMuscle: string;
+  isActive: boolean;
+};
+
+type ExerciseModalState =
+  | {
+      mode: "create";
+      form: ExerciseFormState;
+    }
+  | {
+      mode: "edit";
+      exercise: Exercise;
+      form: ExerciseFormState;
+    };
+
+type ExerciseFilterState = {
+  query: string;
+  onlyMine: boolean;
+  type: "all" | "strength" | "cardio" | "other";
+};
+
+const exerciseTypes: Array<{ value: string; label: string }> = [
+  { value: "strength", label: "筋力" },
+  { value: "cardio", label: "有酸素" },
+  { value: "other", label: "その他" },
+];
+
 type Props = {
   addModalOpen: boolean;
   onCloseAddModal: () => void;
@@ -83,6 +141,13 @@ const emptyCreateForm = (): CreateWorkoutForm => ({
   title: "",
   startedAt: formatDateTimeLocal(new Date()),
   durationMinutes: "",
+});
+
+const emptyExerciseForm = (): ExerciseFormState => ({
+  name: "",
+  type: "strength",
+  primaryMuscle: "",
+  isActive: true,
 });
 
 const emptySetForm = (defaults?: Partial<SetFormState>): SetFormState => ({
@@ -150,6 +215,17 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
   const [setModal, setSetModal] = useState<SetModalState | null>(null);
   const [savingSet, setSavingSet] = useState(false);
 
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exerciseLoading, setExerciseLoading] = useState(false);
+  const [exerciseError, setExerciseError] = useState<string | null>(null);
+  const [exerciseFilters, setExerciseFilters] = useState<ExerciseFilterState>({
+    query: "",
+    onlyMine: false,
+    type: "all",
+  });
+  const [exerciseModal, setExerciseModal] = useState<ExerciseModalState | null>(null);
+  const [savingExercise, setSavingExercise] = useState(false);
+
   const sortedWorkouts = useMemo(
     () =>
       [...workouts].sort(
@@ -157,6 +233,22 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
       ),
     [workouts]
   );
+
+  const sortedExercises = useMemo(
+    () =>
+      [...exercises].sort((a, b) =>
+        a.name.localeCompare(b.name, "ja", { sensitivity: "base" })
+      ),
+    [exercises]
+  );
+
+  const exerciseMap = useMemo(() => {
+    const map = new Map<string, Exercise>();
+    for (const ex of exercises) {
+      map.set(ex.id, ex);
+    }
+    return map;
+  }, [exercises]);
 
   const loadWorkouts = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
@@ -178,6 +270,25 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
     },
     []
   );
+
+  const loadExercises = useCallback(async () => {
+    setExerciseLoading(true);
+    setExerciseError(null);
+    try {
+      const res = await api.listExercises({
+        q: exerciseFilters.query.trim(),
+        type: exerciseFilters.type === "all" ? undefined : exerciseFilters.type,
+        onlyMine: exerciseFilters.onlyMine,
+        limit: 200,
+        offset: 0,
+      });
+      setExercises(res.items);
+    } catch (e) {
+      setExerciseError((e as Error).message ?? "種目一覧の取得に失敗しました");
+    } finally {
+      setExerciseLoading(false);
+    }
+  }, [exerciseFilters.onlyMine, exerciseFilters.query, exerciseFilters.type]);
 
   const loadDetail = useCallback(
     async (id: string, options?: { force?: boolean }) => {
@@ -212,6 +323,10 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
   useEffect(() => {
     loadWorkouts("initial");
   }, [loadWorkouts]);
+
+  useEffect(() => {
+    void loadExercises();
+  }, [loadExercises]);
 
   useEffect(() => {
     if (addModalOpen) {
@@ -362,13 +477,120 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
     }
   };
 
+  const openCreateExerciseModal = () => {
+    setExerciseModal({ mode: "create", form: emptyExerciseForm() });
+  };
+
+  const openEditExerciseModal = (exercise: Exercise) => {
+    setExerciseModal({
+      mode: "edit",
+      exercise,
+      form: {
+        name: exercise.name,
+        type: exercise.type,
+        primaryMuscle: exercise.primaryMuscle ?? "",
+        isActive: exercise.isActive,
+      },
+    });
+  };
+
+  const updateExerciseForm = <K extends keyof ExerciseFormState>(
+    key: K,
+    value: ExerciseFormState[K]
+  ) => {
+    setExerciseModal((prev) =>
+      prev ? { ...prev, form: { ...prev.form, [key]: value } } : prev
+    );
+  };
+
+  const handleSubmitExercise = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!exerciseModal || savingExercise) return;
+
+    const form = exerciseModal.form;
+    const name = form.name.trim();
+    if (!name) {
+      alert("種目名を入力してください");
+      return;
+    }
+    if (!form.type) {
+      alert("種目タイプを選択してください");
+      return;
+    }
+
+    setSavingExercise(true);
+    try {
+      let createdExercise: Exercise | null = null;
+      if (exerciseModal.mode === "create") {
+        createdExercise = await api.createExercise({
+          name,
+          type: form.type,
+          primaryMuscle: form.primaryMuscle.trim() || undefined,
+        });
+      } else {
+        const { exercise } = exerciseModal;
+        const payload: Record<string, unknown> = {};
+        if (name !== exercise.name) payload.name = name;
+        if (form.type !== exercise.type) payload.type = form.type;
+        const trimmedMuscle = form.primaryMuscle.trim();
+        if (trimmedMuscle !== (exercise.primaryMuscle ?? "")) {
+          payload.primaryMuscle = trimmedMuscle === "" ? null : trimmedMuscle;
+        }
+        if (form.isActive !== exercise.isActive) {
+          payload.isActive = form.isActive;
+        }
+        await api.updateExercise(exercise.id, payload);
+      }
+      await loadExercises();
+      if (createdExercise?.id) {
+        const newId = createdExercise.id;
+        setSetModal((prev) =>
+          prev ? { ...prev, form: { ...prev.form, exerciseId: newId } } : prev
+        );
+      }
+      setExerciseModal(null);
+    } catch (e) {
+      alert((e as Error).message ?? "種目の保存に失敗しました");
+    } finally {
+      setSavingExercise(false);
+    }
+  };
+
+  const handleDeleteExercise = async (exercise: Exercise) => {
+    if (!exercise.ownerUserId) return;
+    if (!window.confirm(`「${exercise.name}」を削除しますか？`)) return;
+    try {
+      await api.deleteExercise(exercise.id);
+      await loadExercises();
+    } catch (e) {
+      alert((e as Error).message ?? "種目の削除に失敗しました");
+    }
+  };
+
+  const handleRefreshExercises = () => {
+    void loadExercises();
+  };
+
+  const setExerciseQuery = (value: string) => {
+    setExerciseFilters((prev) => ({ ...prev, query: value }));
+  };
+
+  const toggleExerciseOnlyMine = () => {
+    setExerciseFilters((prev) => ({ ...prev, onlyMine: !prev.onlyMine }));
+  };
+
+  const setExerciseTypeFilter = (value: ExerciseFilterState["type"]) => {
+    setExerciseFilters((prev) => ({ ...prev, type: value }));
+  };
+
   const openCreateSetModal = (workoutId: string) => {
     const currentSets = details[workoutId]?.data?.sets ?? [];
     const nextIndex = currentSets.length;
+    const defaultExerciseId = sortedExercises[0]?.id ?? "";
     setSetModal({
       mode: "create",
       workoutId,
-      form: emptySetForm({ setIndex: String(nextIndex) }),
+      form: emptySetForm({ setIndex: String(nextIndex), exerciseId: defaultExerciseId }),
     });
   };
 
@@ -386,9 +608,13 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
     if (!setModal || savingSet) return;
 
     const form = setModal.form;
-    const exerciseId = form.exerciseId.trim();
-    if (!exerciseId) {
-      alert("種目 ID を入力してください");
+    const resolvedExerciseId = resolveExerciseId(
+      form.exerciseId,
+      sortedExercises,
+      exerciseMap
+    );
+    if (!resolvedExerciseId) {
+      alert("存在する種目を選択してください");
       return;
     }
 
@@ -407,7 +633,7 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
       const trimmedNote = form.note.trim();
       if (setModal.mode === "create") {
         const payload: CreateWorkoutSetInput = {
-          exerciseId,
+          exerciseId: resolvedExerciseId,
           ...commonPayload,
           note: trimmedNote === "" ? undefined : trimmedNote,
         };
@@ -441,6 +667,7 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
   };
 
   const renderSetRow = (workoutId: string, set: WorkoutSet) => {
+    const exerciseMeta = exerciseMap.get(set.exerciseId);
     const summary = [
       set.weightKg != null ? `${set.weightKg} kg` : null,
       set.reps != null ? `${set.reps} 回` : null,
@@ -454,23 +681,41 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
         key={set.id}
         className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 shadow-sm sm:flex-row sm:items-center sm:justify-between"
       >
-        <div>
-          <div className="flex items-center gap-2 font-semibold text-slate-900">
-            <span>セット {set.setIndex + 1}</span>
-            {set.isWarmup && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-600">
-                ウォームアップ
-              </span>
-            )}
+          <div>
+            <div className="flex items-center gap-2 font-semibold text-slate-900">
+              <span>セット {set.setIndex + 1}</span>
+              {set.isWarmup && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-600">
+                  ウォームアップ
+                </span>
+              )}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              種目: {exerciseMeta ? (
+                <>
+                  <span className="font-medium text-slate-700">{exerciseMeta.name}</span>
+                  <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                    {exerciseTypeLabel(exerciseMeta.type)}
+                  </span>
+                  {exerciseMeta.ownerUserId ? (
+                    <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-500">
+                      独自種目
+                    </span>
+                  ) : (
+                    <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                      共有
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="font-mono">{set.exerciseId}</span>
+              )}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">{summary || "記録なし"}</div>
+            {set.note && <div className="mt-2 text-xs text-slate-500">メモ: {set.note}</div>}
           </div>
-          <div className="mt-1 text-xs text-slate-500">
-            種目 ID: <span className="font-mono">{set.exerciseId}</span>
-          </div>
-          <div className="mt-1 text-xs text-slate-500">{summary || "記録なし"}</div>
-          {set.note && <div className="mt-2 text-xs text-slate-500">メモ: {set.note}</div>}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
+          <div className="flex items-center gap-2">
+            <button
             className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
             onClick={() => openEditSetModal(workoutId, set)}
           >
@@ -506,6 +751,98 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
       {listError && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-600 shadow-sm">
           {listError}
+        </div>
+      )}
+
+      {exerciseModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          onClick={() => (!savingExercise ? setExerciseModal(null) : undefined)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {exerciseModal.mode === "create" ? "種目を追加" : "種目を編集"}
+              </h3>
+              <button
+                className="text-slate-400"
+                onClick={() => (!savingExercise ? setExerciseModal(null) : undefined)}
+              >
+                ×
+              </button>
+            </div>
+            <form className="space-y-4" onSubmit={handleSubmitExercise}>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-500">
+                  種目名
+                </label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  value={exerciseModal.form.name}
+                  onChange={(e) => updateExerciseForm("name", e.target.value)}
+                  placeholder="例: ベンチプレス"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-500">
+                  種目タイプ
+                </label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  value={exerciseModal.form.type}
+                  onChange={(e) => updateExerciseForm("type", e.target.value)}
+                >
+                  {exerciseTypes.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-500">
+                  主な部位 (任意)
+                </label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  value={exerciseModal.form.primaryMuscle}
+                  onChange={(e) => updateExerciseForm("primaryMuscle", e.target.value)}
+                  placeholder="例: 胸"
+                />
+              </div>
+              {exerciseModal.mode === "edit" && (
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={exerciseModal.form.isActive}
+                    onChange={(e) => updateExerciseForm("isActive", e.target.checked)}
+                  />
+                  有効にする
+                </label>
+              )}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+                  onClick={() => setExerciseModal(null)}
+                  disabled={savingExercise}
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/30 transition hover:bg-blue-700"
+                  disabled={savingExercise}
+                >
+                  {savingExercise ? "保存中..." : "保存"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -619,6 +956,128 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
           })}
         </div>
       )}
+
+      <div className="space-y-4 rounded-3xl border border-slate-200 bg-white/70 p-6 shadow-md shadow-slate-400/10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">種目 (デバッグ)</h2>
+            <p className="text-xs text-slate-500">
+              グローバル種目と自分の独自種目を確認・編集できます。
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <input
+              className="w-40 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-700 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              placeholder="名前で検索"
+              value={exerciseFilters.query}
+              onChange={(e) => setExerciseQuery(e.target.value)}
+            />
+            <select
+              className="rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-700 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              value={exerciseFilters.type}
+              onChange={(e) => setExerciseTypeFilter(e.target.value as ExerciseFilterState["type"])}
+            >
+              <option value="all">すべてのタイプ</option>
+              {exerciseTypes.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-1 text-slate-600">
+              <input
+                type="checkbox"
+                checked={exerciseFilters.onlyMine}
+                onChange={toggleExerciseOnlyMine}
+              />
+              自分の種目だけ
+            </label>
+            <button
+              className="rounded-xl border border-slate-200 px-3 py-2 font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+              onClick={handleRefreshExercises}
+              type="button"
+            >
+              {exerciseLoading ? "更新中..." : "再読み込み"}
+            </button>
+            <button
+              className="rounded-xl bg-blue-600 px-3 py-2 font-semibold text-white shadow-md shadow-blue-500/30 transition hover:bg-blue-700"
+              type="button"
+              onClick={openCreateExerciseModal}
+            >
+              + 種目追加
+            </button>
+          </div>
+        </div>
+        {exerciseError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-500">
+            {exerciseError}
+          </div>
+        )}
+        {exerciseLoading && exercises.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
+            種目を読み込み中です...
+          </div>
+        ) : sortedExercises.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs text-slate-500">
+            該当する種目がありません。新しく追加してみてください。
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sortedExercises.map((ex) => {
+              const owned = Boolean(ex.ownerUserId);
+              return (
+                <div
+                  key={ex.id}
+                  className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-700 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                      <span>{ex.name}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                        {exerciseTypeLabel(ex.type)}
+                      </span>
+                      {ex.primaryMuscle && (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-500">
+                          {ex.primaryMuscle}
+                        </span>
+                      )}
+                      {!ex.isActive && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-600">
+                          非アクティブ
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      ID: <span className="font-mono">{ex.id}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {ex.ownerUserId ? "あなたの独自種目" : "管理者共有の標準種目"}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => openEditExerciseModal(ex)}
+                      disabled={!owned}
+                    >
+                      編集
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-500 transition hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => handleDeleteExercise(ex)}
+                      disabled={!owned}
+                    >
+                      削除
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {addModalOpen && (
         <div
@@ -805,23 +1264,47 @@ export default function WorkoutsPanel({ addModalOpen, onCloseAddModal }: Props) 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-semibold text-slate-500">
-                    種目 ID
+                    種目
                   </label>
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    value={setModal.form.exerciseId}
-                    onChange={(e) =>
-                      setSetModal((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              form: { ...prev.form, exerciseId: e.target.value },
-                            }
-                          : prev
-                      )
-                    }
-                    placeholder="種目 ID を入力"
-                  />
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      className="w-full flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      list="exercise-id-options"
+                      value={setModal.form.exerciseId}
+                      onChange={(e) =>
+                        setSetModal((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                form: { ...prev.form, exerciseId: e.target.value },
+                              }
+                            : prev
+                        )
+                      }
+                      placeholder="種目を選択 (ID または名前を検索)"
+                    />
+                    <datalist id="exercise-id-options">
+                      {sortedExercises.map((ex) => (
+                        <option
+                          key={ex.id}
+                          value={ex.id}
+                          label={`${ex.name} / ${exerciseTypeLabel(ex.type)}`}
+                        />
+                      ))}
+                    </datalist>
+                    <button
+                      type="button"
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+                      onClick={openCreateExerciseModal}
+                    >
+                      + 種目追加
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {exerciseLoading
+                      ? "種目を読み込み中です..."
+                      : `候補: ${sortedExercises.length} 件`}（共有: owner 未設定、独自: owner 表示）。
+                  </p>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-500">
