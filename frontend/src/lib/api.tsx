@@ -127,6 +127,38 @@ export type UpdateExerciseInput = {
   isActive?: boolean;
 };
 
+export type BodyMetric = {
+  id: string;
+  userId: string;
+  measuredAt: string;
+  weightKg: number;
+  bodyFatPct?: number;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BodyMetricList = {
+  items: BodyMetric[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type CreateBodyMetricInput = {
+  measuredAt: string;
+  weightKg: number;
+  bodyFatPct?: number;
+  note?: string;
+};
+
+export type UpdateBodyMetricInput = {
+  measuredAt?: string;
+  weightKg?: number;
+  bodyFatPct?: number | null;
+  note?: string | null;
+};
+
 export const api = {
   me: () => jfetch<Me>("/api/me"),
   listTodos: () => jfetch<Todo[]>("/api/todos"),
@@ -220,4 +252,31 @@ export const api = {
     }),
   deleteExercise: (id: string) =>
     jfetch<void>(`/api/exercises/${id}`, { method: "DELETE" }),
+  listBodyMetrics: (params?: {
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.from) search.set("from", params.from);
+    if (params?.to) search.set("to", params.to);
+    if (params?.limit != null) search.set("limit", String(params.limit));
+    if (params?.offset != null) search.set("offset", String(params.offset));
+    const qs = search.toString();
+    const path = qs ? `/api/body_metrics?${qs}` : "/api/body_metrics";
+    return jfetch<BodyMetricList>(path);
+  },
+  createBodyMetric: (input: CreateBodyMetricInput) =>
+    jfetch<BodyMetric>("/api/body_metrics", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateBodyMetric: (id: string, input: UpdateBodyMetricInput) =>
+    jfetch<BodyMetric>(`/api/body_metrics/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  deleteBodyMetric: (id: string) =>
+    jfetch<void>(`/api/body_metrics/${id}`, { method: "DELETE" }),
 };

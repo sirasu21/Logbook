@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController, exerciseCtl controller.ExerciseController) *echo.Echo {
+func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController, exerciseCtl controller.ExerciseController, bodyCtl controller.BodyMetricController) *echo.Echo {
 	e := echo.New()
 	store := sessions.NewCookieStore([]byte("super-secret-key"))
 	store.Options = &sessions.Options{
@@ -61,6 +61,11 @@ func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserControlle
     api.POST("/exercises", exerciseCtl.Create)       // 自分の独自種目を作成
     api.PATCH("/exercises/:id", exerciseCtl.Update)  // 自分の独自種目のみ更新
     api.DELETE("/exercises/:id", exerciseCtl.Delete) // 自分の独自種目のみ削除
+
+	api.GET("/body_metrics", bodyCtl.List)
+	api.POST("/body_metrics", bodyCtl.Create)
+	api.PATCH("/body_metrics/:id", bodyCtl.Update)
+	api.DELETE("/body_metrics/:id", bodyCtl.Delete)
 
 
 	e.GET("/api/logout", userCtl.Logout)

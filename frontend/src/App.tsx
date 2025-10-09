@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import WorkoutsPanel from "./components/WorkoutsPanel";
+import BodyMetricsPanel from "./components/BodyMetricsPanel";
 import { api, type Me } from "./lib/api";
 
 export default function App() {
@@ -87,10 +88,14 @@ export default function App() {
             ワークアウト
           </button>
           <button
-            className="rounded-full px-5 py-2 text-sm font-semibold text-slate-400"
-            disabled
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
+              activeTab === "body"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-400/40"
+                : "text-slate-500 hover:bg-slate-100"
+            }`}
+            onClick={() => setActiveTab("body")}
           >
-            体組成記録 (準備中)
+            体組成記録
           </button>
         </nav>
         <div className="flex flex-1 items-center justify-end gap-4">
@@ -122,9 +127,7 @@ export default function App() {
             onCloseAddModal={() => setAddModalOpen(false)}
           />
         ) : (
-          <div className="rounded-3xl bg-white/70 p-12 text-center text-sm text-slate-500 shadow-md">
-            体組成記録は準備中です。
-          </div>
+          <BodyMetricsPanel />
         )}
       </main>
     </div>
