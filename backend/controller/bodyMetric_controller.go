@@ -29,13 +29,7 @@ func NewBodyMetricController(cfg models.Config, uc usecase.BodyMetricUsecase) Bo
 }
 
 func (h *bodyMetricController) currentUserID(c echo.Context) string {
-	if uid, _ := c.Get("userID").(string); uid != "" {
-		return uid
-	}
 	sess, _ := echoSession.Get("session", c)
-	if v, _ := sess.Values["userId"].(string); v != "" {
-		return v
-	}
 	if sub, _ := sess.Values["user_id"].(string); sub != "" {
 		return sub
 	}

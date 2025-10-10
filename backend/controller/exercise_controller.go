@@ -30,16 +30,9 @@ func NewExerciseController(cfg models.Config, uc usecase.ExerciseUsecase) Exerci
 }
 
 func (h *exerciseController) currentUserID(c echo.Context) string {
-	if uid, _ := c.Get("userID").(string); uid != "" {
-		return uid
-	}
 	sess, _ := echoSession.Get("session", c)
 	if v, _ := sess.Values["user_id"].(string); v != "" {
 		return v
-	}
-	// 互換（古いセッション形式）
-	if sub, _ := sess.Values["sub"].(string); sub != "" {
-		return sub
 	}
 	return ""
 }

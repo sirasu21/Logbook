@@ -57,10 +57,10 @@ func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserControlle
 	api.DELETE("/workout_sets/:setId", workoutSetCtl.DeleteSet)
 
 	api.GET("/exercises", exerciseCtl.List)          // ?q=&type=&onlyMine=&limit=&offset=
-    api.GET("/exercises/:id", exerciseCtl.Get)       // 詳細（可視性チェックあり）
-    api.POST("/exercises", exerciseCtl.Create)       // 自分の独自種目を作成
-    api.PATCH("/exercises/:id", exerciseCtl.Update)  // 自分の独自種目のみ更新
-    api.DELETE("/exercises/:id", exerciseCtl.Delete) // 自分の独自種目のみ削除
+    api.GET("/exercises/:id", exerciseCtl.Get)       
+    api.POST("/exercises", exerciseCtl.Create)       
+    api.PATCH("/exercises/:id", exerciseCtl.Update)  
+    api.DELETE("/exercises/:id", exerciseCtl.Delete) 
 
 	api.GET("/body_metrics", bodyCtl.List)
 	api.POST("/body_metrics", bodyCtl.Create)
