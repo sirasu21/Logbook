@@ -114,6 +114,7 @@ func (h *exerciseController) Update(c echo.Context) error {
 	return c.JSON(http.StatusOK, ex)
 }
 
+
 func (h *exerciseController) Delete(c echo.Context) error {
 	userID := h.currentUserID(c)
 	if userID == "" {
