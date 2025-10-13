@@ -115,6 +115,7 @@ func (h *exerciseController) Update(c echo.Context) error {
 }
 
 
+
 func (h *exerciseController) Delete(c echo.Context) error {
 	userID := h.currentUserID(c)
 	if userID == "" {
