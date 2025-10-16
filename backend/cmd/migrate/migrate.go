@@ -7,7 +7,6 @@ import (
 	"github.com/sirasu21/Logbook/backend/models"
 )
 
-// 最初に一回だけすればいい？
 func main() {
 	dbConn := db.InitDB()
 	defer fmt.Println("Successfully Migrated")

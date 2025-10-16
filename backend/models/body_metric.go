@@ -13,4 +13,3 @@ type BodyMetric struct {
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
-// （メモ）重複防止のため UNIQUE (user_id, measured_at) をマイグレーションで付けると良い
