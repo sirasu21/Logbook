@@ -7,6 +7,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo-contrib v0.17.4
 	github.com/labstack/echo/v4 v4.13.4
+	github.com/line/line-bot-sdk-go v7.8.0+incompatible
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.30.5
 )

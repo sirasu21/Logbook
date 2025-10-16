@@ -24,6 +24,7 @@ type WorkoutSet struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+	IsFromLine bool      `gorm:"not null;default:false" json:"isFromLine"`
 }
 
 type WorkoutSetCreateInput struct {

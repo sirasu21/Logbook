@@ -11,7 +11,7 @@ import (
 )
 
 type WorkoutSetUsecase interface {
-	AddSet(ctx context.Context, userID, workoutID string, in models.WorkoutSetCreateInput) (*models.WorkoutSet, error)
+	AddSet(ctx context.Context, userID, workoutID string, in models.WorkoutSetCreateInput, isFromLine bool) (*models.WorkoutSet, error)
 	UpdateSet(ctx context.Context, userID, setID string, in models.WorkoutSetUpdateInput) (*models.WorkoutSet, error)
 	DeleteSet(ctx context.Context, userID, setID string) error
 }
@@ -26,7 +26,7 @@ func NewWorkoutSetUsecase(wr repository.WorkoutRepository, sr repository.Workout
 	return &workoutSetUsecase{wr: wr, sr: sr, er: er}
 }
 
-func (u *workoutSetUsecase) AddSet(ctx context.Context, userID, workoutID string, in models.WorkoutSetCreateInput) (*models.WorkoutSet, error) {
+func (u *workoutSetUsecase) AddSet(ctx context.Context, userID, workoutID string, in models.WorkoutSetCreateInput, isFromLine bool) (*models.WorkoutSet, error) {
 	if _, err := u.ensureWorkoutOwned(ctx, workoutID, userID); err != nil {
 		return nil, err
 	}
@@ -48,6 +48,7 @@ func (u *workoutSetUsecase) AddSet(ctx context.Context, userID, workoutID string
 		Note:        in.Note,
 		DurationSec: in.DurationSec,
 		DistanceM:   in.DistanceM,
+		IsFromLine:  isFromLine,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}

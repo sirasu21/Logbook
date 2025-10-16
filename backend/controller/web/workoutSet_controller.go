@@ -49,7 +49,7 @@ func (h *workoutSetController) AddSet(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid body")
 	}
 
-	ws, err := h.uc.AddSet(c.Request().Context(), userID, workoutID, in)
+	ws, err := h.uc.AddSet(c.Request().Context(), userID, workoutID, in, false)
 	if err != nil {
 		// 将来的にエラー種別で 400/403/404/500 を出し分け
 		return c.String(http.StatusInternalServerError, err.Error())

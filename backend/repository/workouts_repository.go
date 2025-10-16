@@ -20,6 +20,7 @@ type WorkoutRepository interface {
 	ListSetsByWorkout(ctx context.Context, workoutID string) ([]models.WorkoutSet, error)
 	UpdateWorkoutByIDAndUser(ctx context.Context, workoutID, userID string, values map[string]any) (*models.Workout, error)
 	DeleteWorkoutByIDAndUser(ctx context.Context, workoutID, userID string) error
+	FindLatestFromLineByUser(ctx context.Context, userID string, onlyOpen bool) (*models.Workout, error)
 }
 
 type WorkoutQuery struct {
@@ -147,4 +148,20 @@ func (r *workoutRepository) DeleteWorkoutByIDAndUser(ctx context.Context, workou
 	return r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", workoutID, userID).
 		Delete(&models.Workout{}).Error
+}
+
+func (r *workoutRepository) FindLatestFromLineByUser(ctx context.Context, userID string, onlyOpen bool) (*models.Workout, error) {
+	tx := r.db.WithContext(ctx).Model(&models.Workout{}).
+		Where("user_id = ? AND is_from_line = ?", userID, true)
+	if onlyOpen {
+		tx = tx.Where("ended_at IS NULL")
+	}
+	var w models.Workout
+	if err := tx.Order("started_at DESC").Limit(1).First(&w).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil // 見つからない → nil 返す（上位でハンドリング）
+		}
+		return nil, err
+	}
+	return &w, nil
 }

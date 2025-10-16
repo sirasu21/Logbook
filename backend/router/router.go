@@ -9,12 +9,13 @@ import (
 	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	controllerLine "github.com/sirasu21/Logbook/backend/controller/LINE"
 	controller "github.com/sirasu21/Logbook/backend/controller/web"
 	"github.com/sirasu21/Logbook/backend/models"
 	"gorm.io/gorm"
 )
 
-func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController, exerciseCtl controller.ExerciseController, bodyCtl controller.BodyMetricController) *echo.Echo {
+func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController, exerciseCtl controller.ExerciseController, bodyCtl controller.BodyMetricController, lineExerciseCtl controllerLine.LineExerciseController) *echo.Echo {
 	e := echo.New()
 	store := sessions.NewCookieStore([]byte("super-secret-key"))
 	store.Options = &sessions.Options{
@@ -69,6 +70,7 @@ func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserControlle
 
 
 	e.GET("/api/logout", userCtl.Logout)
+	e.POST("/callback", echo.HandlerFunc(lineExerciseCtl.Webhook))
 
 	e.Any("/*", func(c echo.Context) error {
 		if strings.HasPrefix(c.Request().URL.Path, "/api/") {

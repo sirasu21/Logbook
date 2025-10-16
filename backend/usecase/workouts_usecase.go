@@ -12,12 +12,13 @@ import (
 )
 
 type WorkoutUsecase interface {
-	Create(ctx context.Context, userID string, in models.CreateWorkoutInput) (*models.Workout, error)
+	Create(ctx context.Context, userID string, in models.CreateWorkoutInput, isFromLine bool) (*models.Workout, error)
 	End(ctx context.Context, workoutID string, userID string, endedAt time.Time) (*models.Workout, error)
 	ListByUser(ctx context.Context, userID string, f WorkoutListFilter) ([]models.Workout, int, error)
 	GetDetail(ctx context.Context, userID string, workoutID string) (*models.WorkoutDetail, error)
 	Update(ctx context.Context, workoutID, userID string, in models.UpdateWorkoutInput) (*models.Workout, error)
 	Delete(ctx context.Context, workoutID, userID string) error
+	GetLatestLineWorkoutID(ctx context.Context, userID string, onlyOpen bool) (string, error)
 }
 
 type WorkoutListFilter struct {
@@ -36,7 +37,7 @@ func NewWorkoutUsecase(repo repository.WorkoutRepository, setRepo repository.Wor
 	return &workoutUsecase{repo: repo, setRepo: setRepo}
 }
 
-func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.CreateWorkoutInput) (*models.Workout, error) {
+func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.CreateWorkoutInput, isFromLine bool) (*models.Workout, error) {
 	if err := ensureUserID(userID); err != nil {
 		return nil, err
 	}
@@ -51,6 +52,7 @@ func (u *workoutUsecase) Create(ctx context.Context, userID string, in models.Cr
 		UserID:    userID,
 		StartedAt: in.StartedAt,
 		Note:      in.Note,
+		IsFromLine:isFromLine ,
 	}
 	if err := u.repo.Create(ctx, w); err != nil {
 		return nil, err
@@ -157,4 +159,18 @@ func collectWorkoutUpdates(in models.UpdateWorkoutInput) map[string]any {
 		}
 	}
 	return updates
+}
+
+func (u *workoutUsecase) GetLatestLineWorkoutID(ctx context.Context, userID string, onlyOpen bool) (string, error) {
+	if userID == "" {
+		return "", errors.New("unauthorized")
+	}
+	w, err := u.repo.FindLatestFromLineByUser(ctx, userID, onlyOpen)
+	if err != nil {
+		return "", err
+	}
+	if w == nil {
+		return "", errors.New("not found")
+	}
+	return w.ID, nil
 }

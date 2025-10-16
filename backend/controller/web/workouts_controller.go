@@ -50,7 +50,7 @@ func (h *workoutController) CreateWorkout(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid body") // 400
 	}
 
-	w, err := h.uc.Create(c.Request().Context(), userID, in)
+	w, err := h.uc.Create(c.Request().Context(), userID, in, false)
 	if err != nil {
 		// 将来はエラー種別で 400/500 を出し分け
 		return c.String(http.StatusInternalServerError, err.Error())

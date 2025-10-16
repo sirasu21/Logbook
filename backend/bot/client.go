@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/joho/godotenv"
+	"github.com/line/line-bot-sdk-go/linebot"
 	"github.com/sirasu21/Logbook/backend/models"
 )
 
@@ -29,4 +31,20 @@ func LoadConfig() models.Config {
 		SessionSecret:  mustEnv("APP_SESSION_SECRET"),
 		Addr:           addr,
 	}
+}
+
+func InitLineBot() *linebot.Client {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env")
+	}
+
+	bot, err := linebot.New(
+		os.Getenv("LINE_BOT_CHANNEL_SECRET"),
+		os.Getenv("LINE_BOT_CHANNEL_TOKEN"),
+	)
+	if err != nil {
+		log.Fatal("LINE bot 初期化失敗:", err)
+	}
+	return bot
 }

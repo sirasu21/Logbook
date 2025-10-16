@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/sirasu21/Logbook/backend/bot"
+	controllerLine "github.com/sirasu21/Logbook/backend/controller/LINE"
 	controller "github.com/sirasu21/Logbook/backend/controller/web"
 	"github.com/sirasu21/Logbook/backend/db"
 	"github.com/sirasu21/Logbook/backend/repository"
@@ -18,6 +19,7 @@ func main() {
 	_ = godotenv.Load()
 	cfg := bot.LoadConfig()
 	gdb := db.InitDB()
+	client := bot.InitLineBot()
 
 	userRepo := repository.NewLineAuthRepository(http.DefaultClient, gdb)
 	workoutRepo := repository.NewWorkoutRepository(gdb)
@@ -37,7 +39,9 @@ func main() {
 	exerciseCtl := controller.NewExerciseController(cfg, exerciseUC)
 	bodyCtl := controller.NewBodyMetricController(cfg, bodyMetricUC)
 
-	e := router.NewRouter(cfg, gdb, userCtl, workoutCtl, workoutSetCtl, exerciseCtl, bodyCtl)
+	lineExerciseCtl := controllerLine.NewLineExerciseController(client, userUC, workoutUC, workoutSetUC)
+
+	e := router.NewRouter(cfg, gdb, userCtl, workoutCtl, workoutSetCtl, exerciseCtl, bodyCtl, lineExerciseCtl)
 
 	e.Logger.Fatal(e.Start(cfg.Addr))
 }

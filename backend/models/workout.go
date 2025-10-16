@@ -8,6 +8,7 @@ type Workout struct {
 	StartedAt time.Time  `gorm:"not null"                                       json:"startedAt"`
 	EndedAt   *time.Time `json:"endedAt,omitempty"`
 	Note      *string    `gorm:"type:text"                                      json:"note,omitempty"`
+	IsFromLine bool      `gorm:"not null;default:false"`
 	CreatedAt time.Time  `json:"createdAt"`
 	UpdatedAt time.Time  `json:"updatedAt"`
 
