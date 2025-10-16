@@ -9,7 +9,7 @@ import (
 	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/sirasu21/Logbook/backend/controller"
+	controller "github.com/sirasu21/Logbook/backend/controller/web"
 	"github.com/sirasu21/Logbook/backend/models"
 	"gorm.io/gorm"
 )

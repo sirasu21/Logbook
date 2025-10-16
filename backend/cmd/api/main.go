@@ -7,7 +7,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/sirasu21/Logbook/backend/bot"
-	"github.com/sirasu21/Logbook/backend/controller"
+	controller "github.com/sirasu21/Logbook/backend/controller/web"
 	"github.com/sirasu21/Logbook/backend/db"
 	"github.com/sirasu21/Logbook/backend/repository"
 	"github.com/sirasu21/Logbook/backend/router"
