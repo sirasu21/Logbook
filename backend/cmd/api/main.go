@@ -39,7 +39,7 @@ func main() {
 	exerciseCtl := controller.NewExerciseController(cfg, exerciseUC)
 	bodyCtl := controller.NewBodyMetricController(cfg, bodyMetricUC)
 
-	lineExerciseCtl := controllerLine.NewLineExerciseController(client, userUC, workoutUC, workoutSetUC)
+	lineExerciseCtl := controllerLine.NewLineExerciseController(client, userUC, workoutUC)
 
 	e := router.NewRouter(cfg, gdb, userCtl, workoutCtl, workoutSetCtl, exerciseCtl, bodyCtl, lineExerciseCtl)
 
