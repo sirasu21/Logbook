@@ -158,6 +158,46 @@ sequenceDiagram
 - `backend/models/exercise.go:1`
 - `backend/models/body_metric.go:1`
 
+### API 一覧（表）
+
+認証は「必須/不要/署名」。レスポンスは JSON、日時は RFC3339。
+
+| Method | Path | Auth | Request（Body/Query/Path） | Response | 説明 |
+|---|---|---|---|---|---|
+| GET | `/healthz` | 不要 | — | `ok` | ヘルスチェック |
+| GET | `/api/me` | 必須 | — | `{ provider, userId, name?, picture? }` | 現在ユーザー情報 |
+| GET | `/api/auth/line/login` | 不要 | — | 302 Redirect | LINE 認可へリダイレクト |
+| GET | `/api/auth/line/callback` | 不要 | `?code&state` | 302 Redirect | セッション確立→フロントへ |
+| GET | `/api/logout` | 必須 | — | 302 Redirect | セッション破棄 |
+| POST | `/api/workouts` | 必須 | Body: `{ startedAt, note? }` | `Workout` | ワークアウト作成 |
+| PATCH | `/api/workouts/:id` | 必須 | Body: `{ startedAt?, endedAt?, note? }` | `Workout` | 更新 |
+| PATCH | `/api/workouts/:id/end` | 必須 | Body: `{ endedAt? }` | `Workout` | 終了時間を設定 |
+| DELETE | `/api/workouts/:id` | 必須 | — | 204 | 削除（本人のみ） |
+| GET | `/api/workouts` | 必須 | Query: `from?,to?,limit?,offset?` | `{ items[], total, limit, offset }` | 一覧（本人） |
+| GET | `/api/workouts/:id/detail` | 必須 | — | `{ workout, sets[] }` | 詳細（本人） |
+| POST | `/api/workouts/:workoutId/sets` | 必須 | Body: `WorkoutSetCreateInput` | `WorkoutSet` | セット追加 |
+| PATCH | `/api/workout_sets/:setId` | 必須 | Body: `WorkoutSetUpdateInput` | `WorkoutSet` | セット更新 |
+| DELETE | `/api/workout_sets/:setId` | 必須 | — | 204 | セット削除 |
+| GET | `/api/exercises` | 必須 | Query: `q?,type?,onlyMine?,limit?,offset?` | `{ items[], total, limit, offset }` | 種目一覧（可視範囲） |
+| GET | `/api/exercises/:id` | 必須 | — | `Exercise` | 取得（可視範囲） |
+| POST | `/api/exercises` | 必須 | Body: `{ name, type, primaryMuscle? }` | `Exercise` | 自分の独自種目作成 |
+| PATCH | `/api/exercises/:id` | 必須 | Body: `{ name?, type?, primaryMuscle?, isActive? }` | `Exercise` | 自分の独自種目更新 |
+| DELETE | `/api/exercises/:id` | 必須 | — | 204 | 自分の独自種目削除 |
+| GET | `/api/body_metrics` | 必須 | Query: `from?,to?,limit?,offset?` | `{ items[], total, limit, offset }` | 体組成一覧（本人） |
+| POST | `/api/body_metrics` | 必須 | Body: `{ measuredAt, weightKg, bodyFatPct?, note? }` | `BodyMetric` | 体組成作成 |
+| PATCH | `/api/body_metrics/:id` | 必須 | Body: `{ measuredAt?, weightKg?, bodyFatPct?, note? }` | `BodyMetric` | 体組成更新 |
+| DELETE | `/api/body_metrics/:id` | 必須 | — | 204 | 体組成削除 |
+| POST | `/line/webhook` | 署名 | LINE 署名ヘッダ | 200/204 | ボタン/メッセージ受付（Adapter で Usecase 呼び出し） |
+
+### LINE ボタン/ポストバック設計（案）
+
+| action | params 例 | 呼び出す Usecase | 備考 |
+|---|---|---|---|
+| `start` | — | `WorkoutUsecase.Create(userID, { startedAt: now })` | 記録開始 |
+| `end` | — | `WorkoutUsecase.End(workoutID, userID, now)` | 進行中の最新を終了（取得方法はUsecase側で定義） |
+| `add_set` | `exerciseId=...,reps=...,weight=...,rpe=...` | `WorkoutSetUsecase.AddSet(userID, workoutID, input)` | セット追加（UIで段階入力でも可） |
+| `today` | — | `WorkoutUsecase.ListByUser(userID, { from: today, to: tomorrow })` | 今日の記録を返信 |
+
 ---
 
 ## DB 設計
@@ -348,3 +388,83 @@ erDiagram
 - 認可はリポジトリ層で `session["user_id"]` とレコードの所有者を突き合わせて担保。
 - 現状、エラー詳細は最小限（404/403 の厳密な出し分けは今後調整余地あり）。
 - `docs/db/` 以下の SchemaSpy 出力は古い可能性があります。本ドキュメントは現在の Go 実装（ルーター/モデル）に基づきます。
+
+---
+
+## 実装インターフェース（表）
+
+Usecase（アプリケーションロジック）
+
+| Area | Method | 目的 | 入力 | 出力 | 主なエラー/注意 |
+|---|---|---|---|---|---|
+| AuthUsecase | BuildAuthorizeURL | LINE 認可 URL を生成 | `channelID, redirectURI, state, nonce, codeChallenge` | URL 文字列 | — |
+| AuthUsecase | ExchangeCode | 認可コード→アクセストークン交換（PKCE） | `channelID, channelSecret, redirectURI, code, verifier` | `accessToken` | 通信/4xx/5xx |
+| AuthUsecase | FetchProfile | LINE プロフィール取得 | `accessToken` | `models.Profile` | 通信/認可エラー |
+| AuthUsecase | EnsureUserFromLineProfile | `line_user_id` で Upsert | `sub, displayName?, pictureURL?, email?` | `*models.User` | DB エラー |
+| UserUsecase | Me | 現在ユーザー情報を返却 | `userID` | `*models.User` | NotFound 可 |
+| WorkoutUsecase | Create | 本人のワークアウト作成 | `userID`, `CreateWorkoutInput` | `*Workout` | `startedAt` 必須 |
+| WorkoutUsecase | End | 終了時刻の設定 | `workoutID`, `userID`, `endedAt` | `*Workout` | 権限なし/存在しない |
+| WorkoutUsecase | Update | 部分更新 | `workoutID`, `userID`, `UpdateWorkoutInput` | `*Workout` | NotFound/NULL扱い |
+| WorkoutUsecase | Delete | 本人レコード削除 | `workoutID`, `userID` | `error` | NotFound |
+| WorkoutUsecase | ListByUser | 本人一覧（期間/ページング） | `userID`, `WorkoutListFilter` | `[]Workout, total` | 期間妥当性/DB |
+| WorkoutUsecase | GetDetail | 本人の詳細（セット付き） | `userID`, `workoutID` | `*WorkoutDetail` | NotFound |
+| WorkoutSetUsecase | AddSet | セット追加（種目存在チェック） | `userID`, `workoutID`, `WorkoutSetCreateInput` | `*WorkoutSet` | 権限なし/種目未存在 |
+| WorkoutSetUsecase | UpdateSet | セットの部分更新 | `userID`, `setID`, `WorkoutSetUpdateInput` | `*WorkoutSet` | NotFound/DB |
+| WorkoutSetUsecase | DeleteSet | セット削除 | `userID`, `setID` | `error` | NotFound |
+| ExerciseUsecase | List | 可視範囲の一覧（グローバル/自分） | `userID`, `ListExercisesInput` | `ExerciseListOutput` | — |
+| ExerciseUsecase | Get | 可視範囲内の取得 | `userID`, `id` | `*Exercise` | NotFound |
+| ExerciseUsecase | Create | 自分の独自種目作成 | `userID`, `CreateExerciseInput` | `*Exercise` | name/type 必須、重複 |
+| ExerciseUsecase | Update | 自分の独自種目更新 | `userID`, `id`, `UpdateExerciseInput` | `*Exercise` | NotFound/重複 |
+| ExerciseUsecase | Delete | 自分の独自種目削除 | `userID`, `id` | `error` | NotFound |
+| BodyMetricUsecase | List | 本人一覧 | `userID`, `BodyMetricListInput` | `BodyMetricListOutput` | — |
+| BodyMetricUsecase | Create | 本人作成（`weightKg>0`） | `userID`, `CreateBodyMetricInput` | `*BodyMetric` | weightKg>0 |
+| BodyMetricUsecase | Update | 本人更新 | `userID`, `id`, `UpdateBodyMetricInput` | `*BodyMetric` | — |
+| BodyMetricUsecase | Delete | 本人削除 | `userID`, `id` | `error` | NotFound |
+
+Repository（永続化）
+
+| Area | Method | 目的 | 入力 | 出力 | 主なエラー/注意 |
+|---|---|---|---|---|---|
+| AuthRepository | BuildAuthorizeURL | 認可 URL 生成 | `clientID, redirectURI, state, nonce, codeChallenge` | URL 文字列 | — |
+| AuthRepository | ExchangeCode | 認可コード→アクセストークン交換 | `clientID, clientSecret, redirectURI, code, verifier` | `accessToken` | 通信/4xx/5xx |
+| AuthRepository | FetchProfile | LINE プロフィール取得 | `accessToken` | `Profile` | 通信/認可エラー |
+| AuthRepository | ResolveOrCreateBySub | `line_user_id` で解決/作成 | `sub, name?, pictureURL?, email?` | `*models.User` | DB エラー |
+| WorkoutRepository | Create | ワークアウト作成 | `*models.Workout` | `error` | — |
+| WorkoutRepository | FindByIDForUser | 本人レコード取得 | `workoutID, userID` | `*Workout` | NotFound |
+| WorkoutRepository | UpdateEndedAt | 終了時刻更新→再取得 | `workoutID, endedAt` | `*Workout` | NotFound/DB |
+| WorkoutRepository | FindWorkoutsByUser | 本人一覧+総件数 | `userID, WorkoutQuery` | `[]Workout, total(int)` | — |
+| WorkoutRepository | FindByID | ID で 1 件 | `id` | `*Workout or nil` | — |
+| WorkoutRepository | FindByIDAndUser | ID+本人で 1 件 | `workoutID, userID` | `*Workout` | NotFound |
+| WorkoutRepository | ListSetsByWorkout | セット一覧（順序付） | `workoutID` | `[]WorkoutSet` | — |
+| WorkoutRepository | UpdateWorkoutByIDAndUser | 部分更新 | `workoutID, userID, values(map[string]any)` | `*Workout` | NULL/DTO設計に注意 |
+| WorkoutRepository | DeleteWorkoutByIDAndUser | 本人レコード削除 | `workoutID, userID` | `error` | NotFound |
+| WorkoutSetRepository | FindByID | セット 1 件 | `id` | `*WorkoutSet or nil` | — |
+| WorkoutSetRepository | Create | セット作成 | `*WorkoutSet` | `error` | — |
+| WorkoutSetRepository | Update | セット更新 | `*WorkoutSet` | `error` | — |
+| WorkoutSetRepository | Delete | セット削除 | `id` | `error` | NotFound |
+| WorkoutSetRepository | DeleteByWorkoutID | 親のセット一括削除 | `workoutID` | `error` | — |
+| ExerciseRepository | FindByID | ID で 1 件 | `id` | `*Exercise or nil` | — |
+| ExerciseRepository | List | 一覧+総件数（可視条件考慮） | `userID, ListExercisesFilter{...}` | `[]Exercise, total(int64)` | — |
+| ExerciseRepository | GetByID | ID で 1 件 | `id` | `*Exercise` | NotFound |
+| ExerciseRepository | Create | 新規作成 | `*Exercise` | `error` | 重複/制約 |
+| ExerciseRepository | UpdateOwned | 自分の独自種目更新 | `userID, id, UpdateExerciseFields` | `*Exercise` | NotFound/重複 |
+| ExerciseRepository | DeleteOwned | 自分の独自種目削除 | `userID, id` | `error` | NotFound |
+| BodyMetricRepository | ListByUser | 本人一覧+総件数 | `userID, BodyMetricListFilter{...}` | `[]BodyMetric, total(int64)` | — |
+| BodyMetricRepository | Create | 本人レコード作成 | `*BodyMetric` | `error` | — |
+| BodyMetricRepository | UpdateOwned | 本人レコード更新 | `userID, id, UpdateBodyMetricFields` | `*BodyMetric` | NotFound |
+| BodyMetricRepository | DeleteOwned | 本人レコード削除 | `userID, id` | `error` | NotFound |
+
+---
+
+## エラーレスポンス/バリデーション規約
+
+- 成功: データ本体 or `{ items, total, limit, offset }`
+- 失敗: `{ code, message, requestId }`
+  - 400: バリデーションエラー
+  - 401: 未認証
+  - 403: 所有権なし
+  - 404: 見つからない
+  - 429: レート制限
+  - 5xx: 内部エラー（詳細はログへ）
+- バリデーション: UUID/数値範囲/日時整合性は Adapter→Usecase の段階で検証
+- 認可: `userID` と対象レコード所有者の一致を Repository クエリで担保
