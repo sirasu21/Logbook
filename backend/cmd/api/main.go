@@ -10,8 +10,10 @@ import (
 	controllerLine "github.com/sirasu21/Logbook/backend/controller/LINE"
 	controller "github.com/sirasu21/Logbook/backend/controller/web"
 	"github.com/sirasu21/Logbook/backend/db"
+	repositoryLine "github.com/sirasu21/Logbook/backend/repository/LINE"
 	repository "github.com/sirasu21/Logbook/backend/repository/web"
 	"github.com/sirasu21/Logbook/backend/router"
+	usecaseLine "github.com/sirasu21/Logbook/backend/usecase/LINE"
 	usecase "github.com/sirasu21/Logbook/backend/usecase/web"
 )
 
@@ -20,18 +22,21 @@ func main() {
 	cfg := bot.LoadConfig()
 	gdb := db.InitDB()
 	client := bot.InitLineBot()
+	rd := db.InitRedis()
 
 	userRepo := repository.NewLineAuthRepository(http.DefaultClient, gdb)
 	workoutRepo := repository.NewWorkoutRepository(gdb)
 	workoutSetRepo := repository.NewWorkoutSetRepository(gdb)
 	exerciseRepo := repository.NewExerciseRepository(gdb)
 	bodyMetricRepo := repository.NewBodyMetricRepository(gdb)
+	lineRepo := repositoryLine.NewLineRepository(rd)
 
 	userUC := usecase.NewUserUsecase(userRepo)
 	workoutUC := usecase.NewWorkoutUsecase(workoutRepo, workoutSetRepo)
 	workoutSetUC := usecase.NewWorkoutSetUsecase(workoutRepo, workoutSetRepo, exerciseRepo)
 	exerciseUC := usecase.NewExerciseUsecase(exerciseRepo)
 	bodyMetricUC := usecase.NewBodyMetricUsecase(bodyMetricRepo)
+	lineUC := usecaseLine.NewLineUsecase(lineRepo)
 
 	userCtl := controller.NewUserController(cfg, userUC)
 	workoutCtl := controller.NewWorkoutController(cfg, workoutUC)
@@ -39,9 +44,9 @@ func main() {
 	exerciseCtl := controller.NewExerciseController(cfg, exerciseUC)
 	bodyCtl := controller.NewBodyMetricController(cfg, bodyMetricUC)
 
-	lineExerciseCtl := controllerLine.NewLineExerciseController(client, userUC, workoutUC)
+	lineCtl := controllerLine.NewLineController(client, lineUC, exerciseUC, workoutUC, userUC, workoutSetUC)
 
-	e := router.NewRouter(cfg, gdb, userCtl, workoutCtl, workoutSetCtl, exerciseCtl, bodyCtl, lineExerciseCtl)
+	e := router.NewRouter(cfg, gdb, userCtl, workoutCtl, workoutSetCtl, exerciseCtl, bodyCtl, lineCtl)
 
 	e.Logger.Fatal(e.Start(cfg.Addr))
 }

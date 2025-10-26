@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController, exerciseCtl controller.ExerciseController, bodyCtl controller.BodyMetricController, lineExerciseCtl controllerLine.LineExerciseController) *echo.Echo {
+func NewRouter(cfg models.Config, gdb *gorm.DB, userCtl controller.UserController, workoutCtl controller.WorkoutController, workoutSetCtl controller.WorkoutSetController, exerciseCtl controller.ExerciseController, bodyCtl controller.BodyMetricController, lineExerciseCtl controllerLine.LineController) *echo.Echo {
 	e := echo.New()
 	store := sessions.NewCookieStore([]byte("super-secret-key"))
 	store.Options = &sessions.Options{

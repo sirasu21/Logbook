@@ -19,36 +19,40 @@
       },
       {
         "type": "button",
-        "action": { "type": "postback", "label": "終了", "data": "action=end" }
-      },
-      {
-        "type": "button",
-        "action": { "type": "postback", "label": "追加", "data": "action=add" }
-      },
-      {
-        "type": "button",
         "action": {
           "type": "postback",
-          "label": "種目",
-          "data": "action=exercise"
-        }
-      },
-      {
-        "type": "button",
-        "action": {
-          "type": "postback",
-          "label": "重量",
-          "data": "action=weight"
-        }
-      },
-      {
-        "type": "button",
-        "action": {
-          "type": "postback",
-          "label": "回数",
-          "data": "action=count"
+          "label": "終了",
+          "data": "action=end"
         }
       }
+      // {
+      //   "type": "button",
+      //   "action": { "type": "postback", "label": "追加", "data": "action=add" }
+      // },
+      // {
+      //   "type": "button",
+      //   "action": {
+      //     "type": "postback",
+      //     "label": "種目",
+      //     "data": "action=exercise"
+      //   }
+      // },
+      // {
+      //   "type": "button",
+      //   "action": {
+      //     "type": "postback",
+      //     "label": "重量",
+      //     "data": "action=weight"
+      //   }
+      // },
+      // {
+      //   "type": "button",
+      //   "action": {
+      //     "type": "postback",
+      //     "label": "回数",
+      //     "data": "action=count"
+      //   }
+      // }
     ]
   }
 }
