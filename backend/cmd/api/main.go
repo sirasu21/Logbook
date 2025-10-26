@@ -12,7 +12,7 @@ import (
 	"github.com/sirasu21/Logbook/backend/db"
 	repository "github.com/sirasu21/Logbook/backend/repository/web"
 	"github.com/sirasu21/Logbook/backend/router"
-	"github.com/sirasu21/Logbook/backend/usecase"
+	usecase "github.com/sirasu21/Logbook/backend/usecase/web"
 )
 
 func main() {

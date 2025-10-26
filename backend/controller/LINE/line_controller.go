@@ -13,7 +13,7 @@ import (
 	"github.com/line/line-bot-sdk-go/linebot"
 
 	"github.com/sirasu21/Logbook/backend/models"
-	"github.com/sirasu21/Logbook/backend/usecase"
+	usecase "github.com/sirasu21/Logbook/backend/usecase/web"
 )
 
 

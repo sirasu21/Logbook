@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/sirasu21/Logbook/backend/models"
-	"github.com/sirasu21/Logbook/backend/usecase"
+	usecase "github.com/sirasu21/Logbook/backend/usecase/web"
 )
 
 type WorkoutSetController interface {
