@@ -20,7 +20,7 @@ type UserController interface {
 	Logout(c echo.Context) error
 	LineLogin(c echo.Context) error
 	LineCallback(c echo.Context) error
-}
+}	
 
 type userController struct {
 	cfg models.Config
