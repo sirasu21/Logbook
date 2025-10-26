@@ -10,7 +10,7 @@ import (
 	controllerLine "github.com/sirasu21/Logbook/backend/controller/LINE"
 	controller "github.com/sirasu21/Logbook/backend/controller/web"
 	"github.com/sirasu21/Logbook/backend/db"
-	"github.com/sirasu21/Logbook/backend/repository"
+	repository "github.com/sirasu21/Logbook/backend/repository/web"
 	"github.com/sirasu21/Logbook/backend/router"
 	"github.com/sirasu21/Logbook/backend/usecase"
 )

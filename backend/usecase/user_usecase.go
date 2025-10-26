@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"github.com/sirasu21/Logbook/backend/models"
-	"github.com/sirasu21/Logbook/backend/repository"
+	repository "github.com/sirasu21/Logbook/backend/repository/web"
 )
 
 type UserUsecase interface {
