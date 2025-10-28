@@ -1,0 +1,66 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "16px",
+    "backgroundColor": "#0ea5e9",
+    "contents": [
+      {
+        "type": "text",
+        "text": "ワークアウトを始めよう",
+        "weight": "bold",
+        "size": "lg",
+        "color": "#FFFFFF"
+      },
+      {
+        "type": "text",
+        "text": "Start your session",
+        "size": "xs",
+        "color": "#E0F2FE",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "lg",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "準備ができたら「開始」をタップ！",
+        "size": "sm",
+        "color": "#475569"
+      },
+      { "type": "separator", "margin": "lg" },
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "md",
+        "color": "#22c55e",
+        "action": {
+          "type": "postback",
+          "label": "開始",
+          "data": "action=start"
+        }
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "paddingAll": "16px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "開始すると記録メニューが表示されます",
+        "size": "xs",
+        "color": "#94a3b8"
+      }
+    ]
+  }
+}

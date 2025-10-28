@@ -1,0 +1,76 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "horizontal",
+    "paddingAll": "lg",
+    "contents": [
+      {
+        "type": "text",
+        "text": "種目を選択してください",
+        "weight": "bold",
+        "size": "md",
+        "color": "#333333"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "lg",
+    "spacing": "md",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#0f9bff",
+        "action": {
+          "type": "message",
+          "label": "デッドリフト",
+          "text": "5638ccdd-71da-4977-a53b-bc21afa04b6c"
+        }
+      },
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#0f9bff",
+        "action": {
+          "type": "message",
+          "label": "ベンチプレス",
+          "text": "6e1ee985-7bbe-45d6-b4c6-d2f7892ded8d"
+        }
+      },
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#0f9bff",
+        "action": {
+          "type": "message",
+          "label": "ラットプルダウン",
+          "text": "b9d17a4f-20ba-4983-88fb-2fefe713e132"
+        }
+      },
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#0f9bff",
+        "action": {
+          "type": "message",
+          "label": "ショルダープレス",
+          "text": "d2aa8df7-d422-4f87-b103-dd10ef9b1838"
+        }
+      },
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#0f9bff",
+        "action": {
+          "type": "message",
+          "label": "バックスクワット",
+          "text": "de1ed478-9973-4c7c-b623-f4562f11e29e"
+        }
+      }
+    ]
+  }
+}

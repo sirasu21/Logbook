@@ -1,0 +1,70 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "horizontal",
+    "paddingAll": "14px",
+    "backgroundColor": "#10b981",
+    "contents": [
+      {
+        "type": "text",
+        "text": "ワークアウト中",
+        "weight": "bold",
+        "size": "md",
+        "color": "#FFFFFF",
+        "flex": 0
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "paddingAll": "18px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "セットを追加するか、終了しますか？",
+        "size": "sm",
+        "color": "#475569"
+      },
+      { "type": "separator", "margin": "md" },
+      {
+        "type": "button",
+        "style": "primary",
+        "height": "md",
+        "color": "#3b82f6",
+        "action": {
+          "type": "postback",
+          "label": "追加",
+          "data": "action=add"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "md",
+        "color": "#ef4444",
+        "action": {
+          "type": "postback",
+          "label": "終了",
+          "data": "action=end"
+        }
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "14px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "「追加」後は 種目 → 重量 → 回数 の順に入力",
+        "size": "xs",
+        "color": "#94a3b8"
+      }
+    ]
+  }
+}
