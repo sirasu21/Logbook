@@ -74,10 +74,12 @@ func (l *lineController) Webhook(c echo.Context) error {
 		// 初回登録時
 		case linebot.EventTypeFollow:
 			if err := l.CreateUser(event); err != nil {
-				l.replyTextAndMenu(event.ReplyToken, fmt.Sprintf("登録時にエラーが発生しました: %v", err))
+				l.replyText(event.ReplyToken, fmt.Sprintf("登録時にエラーが発生しました: %v", err))
+				l.pushStartMenu(event.Source.UserID)
 				continue
 			}
-			l.replyTextAndMenu(event.ReplyToken, "登録しました！「開始」「終了」ボタン（またはメッセージ）でどうぞ💪")
+			l.replyText(event.ReplyToken, "登録しました！「開始」「終了」ボタン（またはメッセージ）でどうぞ💪")
+			l.pushStartMenu(event.Source.UserID)
 		case linebot.EventTypeMessage:
 			l.handleText(event)
 
@@ -93,14 +95,15 @@ func (l *lineController) Webhook(c echo.Context) error {
 				if err := l.createWorkout(event); err != nil {
 					return err
 				}
-				l.replyTextAndMenu(event.ReplyToken, "ワークアウトを開始しました！")
+				l.replyText(event.ReplyToken, "ワークアウトを開始しました！")
+				l.pushAddMenu(event.Source.UserID)
 
 			case "action=end":
 				if err := l.endWorkout(event); err != nil {
 					return err
 				}
-				l.replyTextAndMenu(event.ReplyToken, "ワークアウトを終了しました！")
-
+				l.replyText(event.ReplyToken, "ワークアウトを終了しました！")
+				l.pushStartMenu(event.Source.UserID)
 			case "action=add":
 				// 最新 LINE 由来ワークアウトIDを取得
 				user, err := l.getOrCreateUser(ctx, uid)
@@ -115,29 +118,32 @@ func (l *lineController) Webhook(c echo.Context) error {
 				s.Pending = lineflow.Pending{}
 				s.State = lineflow.StateAddExercise
 				_ = lineflow.SaveState(ctx, l.lineuc, uid, s, stateTTL)
-				l.replyTextAndMenu(event.ReplyToken, "種目IDを送ってください（例: 11111111-....）")
-
+				l.replyText(event.ReplyToken, "種目IDを送ってください（例: 11111111-....）")
+				l.pushExerciseListMenu(event.Source.UserID)
 			case "action=exercise":
 				s.State = lineflow.StateAddExercise
 				_ = lineflow.SaveState(ctx, l.lineuc, uid, s, stateTTL)
-				l.replyTextAndMenu(event.ReplyToken, "種目IDを送ってください")
+				l.replyText(event.ReplyToken, "種目IDを送ってください")
 
 			case "action=weight":
 				s.State = lineflow.StateAddWeight
 				_ = lineflow.SaveState(ctx, l.lineuc, uid, s, stateTTL)
-				l.replyTextAndMenu(event.ReplyToken, "重量(kg)を送ってください（例: 60）")
+				l.replyText(event.ReplyToken, "重量(kg)を送ってください（例: 60）")
 
 			case "action=count":
 				s.State = lineflow.StateAddCount
 				_ = lineflow.SaveState(ctx, l.lineuc, uid, s, stateTTL)
-				l.replyTextAndMenu(event.ReplyToken, "回数を送ってください（例: 8）")
+				l.replyText(event.ReplyToken, "回数を送ってください（例: 8）")
 
 			case "action=cancel":
 				lineflow.ClearState(ctx, l.lineuc, uid)
-				l.replyTextAndMenu(event.ReplyToken, "キャンセルしました。『追加』からやり直してください")
+				l.replyText(event.ReplyToken, "キャンセルしました。『追加』からやり直してください")
+				l.pushAddMenu(event.Source.UserID)
+
 
 			default:
-				l.replyTextAndMenu(event.ReplyToken, "未対応の操作です")
+				l.replyText(event.ReplyToken, "未対応の操作です")
+				l.pushStartMenu(event.Source.UserID)
 			}
 
 		}
@@ -231,7 +237,8 @@ func (l *lineController) handleText(event *linebot.Event) {
 
 	s, _ := lineflow.LoadState(ctx, l.lineuc, uid)
 	if s.State == lineflow.StateIdle {
-		l.replyTextAndMenu(event.ReplyToken, "『追加』ボタン → 入力を進めてね")
+		l.replyText(event.ReplyToken, "『追加』ボタン → 入力を進めてね")
+		l.pushAddMenu(uid)
 		return
 	}
 
@@ -240,43 +247,45 @@ func (l *lineController) handleText(event *linebot.Event) {
 	case lineflow.StateAddExercise:
 		// TODO: UUIDバリデーション（簡易）
 		if len(text) < 8 {
-			l.replyTextAndMenu(event.ReplyToken, "種目IDが短すぎます。正しいIDを送ってください")
+			l.replyText(event.ReplyToken, "種目IDが短すぎます。正しいIDを送ってください")
+			l.pushAddMenu(uid)
 			return
 		}
 		s.Pending.ExerciseID = text
 		s.State = lineflow.StateAddWeight
 		_ = lineflow.SaveState(ctx, l.lineuc, uid, s, stateTTL)
-		l.replyTextAndMenu(event.ReplyToken, "OK! 次は重量(kg)を送ってください（例: 60）")
+		l.replyText(event.ReplyToken, "OK! 次は重量(kg)を送ってください（例: 60）")
 
 	case lineflow.StateAddWeight:
 		w, err := strconv.ParseFloat(text, 64)
 		if err != nil || w < 0 {
-			l.replyTextAndMenu(event.ReplyToken, "重量は0以上の数値で送ってください")
+			l.replyText(event.ReplyToken, "重量は0以上の数値で送ってください")
 			return
 		}
 		s.Pending.Weight = &w
 		s.State = lineflow.StateAddCount
 		_ = lineflow.SaveState(ctx, l.lineuc, uid, s, stateTTL)
-		l.replyTextAndMenu(event.ReplyToken, "OK! 次は回数を送ってください（例: 8）")
+		l.replyText(event.ReplyToken, "OK! 次は回数を送ってください（例: 8）")
 
 	case lineflow.StateAddCount:
 		n, err := strconv.Atoi(text)
 		if err != nil || n <= 0 {
-			l.replyTextAndMenu(event.ReplyToken, "回数は正の整数で送ってください")
+			l.replyText(event.ReplyToken, "回数は正の整数で送ってください")
 			return
 		}
 		s.Pending.Repetitions = &n
 
 		if !s.Ready() {
 			_ = lineflow.SaveState(ctx, l.lineuc, uid, s, stateTTL)
-			l.replyTextAndMenu(event.ReplyToken, "まだ情報が足りません。ボタンで続けてください")
+			l.replyText(event.ReplyToken, "まだ情報が足りません。ボタンで続けてください")
 			return
 		}
 
 		// ここで DB 登録
 		user, err := l.getOrCreateUser(ctx, uid)
 		if err != nil {
-			l.replyTextAndMenu(event.ReplyToken, "ユーザー解決に失敗しました")
+			l.replyText(event.ReplyToken, "ユーザー解決に失敗しました")
+			l.pushStartMenu(uid)
 			return
 		}
 		in := models.WorkoutSetCreateInput{
@@ -291,13 +300,15 @@ func (l *lineController) handleText(event *linebot.Event) {
 		}
 
 		if _, err := l.workoutSetuc.AddSet(ctx, user.ID, s.WorkoutID, in, true); err != nil {
-			l.replyTextAndMenu(event.ReplyToken, "セット登録に失敗しました。『回数』からやり直してください")
+			l.replyText(event.ReplyToken, "セット登録に失敗しました。『回数』からやり直してください")
+
 			return
 		}
 
 		// 完了 → idle に戻す
 		lineflow.ClearState(ctx, l.lineuc, uid)
-		l.replyTextAndMenu(event.ReplyToken, "セットを登録しました！ 続けて『追加』でどうぞ")
+		l.replyText(event.ReplyToken, "セットを登録しました！ 続けて『追加』でどうぞ")
+		l.pushAddMenu(uid)
 	}
 }
 
@@ -317,24 +328,51 @@ func (l *lineController) getOrCreateUser(ctx context.Context, lineUserID string)
 	return l.useruc.EnsureUserFromLineProfile(ctx, prof.UserID, &prof.DisplayName, &prof.PictureURL, nil)
 }
 
-func (l *lineController) replyTextAndMenu(token, text string) {
-	container, err := getFlexMenuContainer()
-	if err != nil {
-		// menu.json が壊れているなどの時はテキストのみ
-		_, _ = l.bot.ReplyMessage(token, linebot.NewTextMessage(text+"\n(メニューの読み込みに失敗しました)")).Do()
-		return
-	}
+func (l *lineController) replyText(token, text string) {
 	_, _ = l.bot.ReplyMessage(
 		token,
-		linebot.NewTextMessage(text),
+		linebot.NewTextMessage(text)).Do()
+}
+
+func (l *lineController) pushStartMenu(userID string) {
+	container, err := getFlexContainer("start")
+	if err != nil {
+		return
+	}
+	_, _ = l.bot.PushMessage(
+		userID,
 		linebot.NewFlexMessage("メニュー", container),
 	).Do()
 }
 
-func getFlexMenuContainer() (linebot.FlexContainer, error) {
-	data, err := ioutil.ReadFile("assets/flex/menu.json") // 実行時に読み込む
+func (l *lineController) pushAddMenu(userID string) {
+	container, err := getFlexContainer("add")
 	if err != nil {
-		return nil, err
+		return
 	}
-	return linebot.UnmarshalFlexMessageJSON(data)
+	_, _ = l.bot.PushMessage(
+		userID,
+		linebot.NewFlexMessage("メニュー", container),
+	).Do()
+}
+
+func (l *lineController) pushExerciseListMenu(userID string) {
+	container, err := getFlexContainer("exercise_list")
+	if err != nil {
+		return
+	}
+	_, _ = l.bot.PushMessage(
+		userID,
+		linebot.NewFlexMessage("メニュー", container),
+	).Do()
+}
+
+
+func getFlexContainer(filename string) (linebot.FlexContainer, error) {
+    path := fmt.Sprintf("assets/flex/%s.json", filename)
+    data, err := ioutil.ReadFile(path)
+    if err != nil {
+        return nil, err
+    }
+    return linebot.UnmarshalFlexMessageJSON(data)
 }
