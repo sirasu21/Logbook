@@ -30,6 +30,7 @@ func NewWorkoutSetUsecase(wr repository.WorkoutRepository, sr repository.Workout
 func (u *workoutSetUsecase) AddSet(ctx context.Context, userID, workoutID string, in models.WorkoutSetCreateInput, isFromLine bool) (*models.WorkoutSet, error) {
 	if _, err := u.ensureWorkoutOwned(ctx, workoutID, userID); err != nil {
 		log.Println("ensureWorkoutOwned error", err)
+		
 		return nil, err
 	}
 	// 2) 種目存在チェック（外部キーで落とすでもOKだが、UXのため先に確認）
