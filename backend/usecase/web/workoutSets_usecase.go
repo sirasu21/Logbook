@@ -37,6 +37,7 @@ func (u *workoutSetUsecase) AddSet(ctx context.Context, userID, workoutID string
 	if _, err := u.er.FindByID(ctx, in.ExerciseID); err != nil {
 		
 		return nil, err
+		
 	}
 
 	now := time.Now()
