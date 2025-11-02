@@ -38,4 +38,6 @@ go.work.sum
 
 .vscode/
 
-*.rdb
+
+# Redis persistence
+data/dump.rdb
