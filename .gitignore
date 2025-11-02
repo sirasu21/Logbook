@@ -40,4 +40,4 @@ go.work.sum
 
 
 # Redis persistence
-data/dump.rdb
+data/redis/dump.rdb
