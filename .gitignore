@@ -37,3 +37,5 @@ go.work.sum
 .Trashes
 
 .vscode/
+
+*.rdb
