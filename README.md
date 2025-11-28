@@ -138,9 +138,63 @@ flowchart LR
 
 ## 7. 実行方法（How to Run）
 
-ローカルで動かす場合：
+### ローカル開発（Web + LINE Bot）
 
-本番環境で動かす場合：
+ローカル開発では、バックエンド・フロントエンド・LINE 設定の 3 つを整えれば動作します。
+
+#### 1. ngrok でバックエンド（3000 番）を公開
+
+```bash
+ngrok http 3000
+```
+
+→ 表示された `https://xxxxx.ngrok-free.app` を控えておく。
+
+#### 2. 環境変数を設定（重要）
+
+フロントエンド・バックエンドの `.env` に ngrok の URL を設定する。
+特に LINE OAuth のコールバックは以下の形式で必ず https を使う。
+
+```bash
+LINE_REDIRECT_URI=https://xxxxx.ngrok-free.app/api/auth/line/callback
+```
+
+#### 3. Docker（DB など）を起動
+
+```bash
+docker compose up -d
+```
+
+#### 4. DB マイグレーション
+
+```bash
+cd backend
+go run cmd/migrate/migrate.go
+```
+
+#### 5. 初期データ投入（必要な場合）
+
+```bash
+cd backend
+go run cmd/seed/seed.go
+```
+
+#### 6. バックエンドを起動
+
+```bash
+cd backend
+go run cmd/api/main.go
+```
+
+#### 7. フロントエンドを起動
+
+```bash
+cd frontend
+npm run dev
+```
+
+以上で、LINE Bot と Web アプリの両方がローカル環境で動作する。
+フロントはブラウザで開き、LINE 側には Webhook URL と Callback URL を ngrok の URL で設定すること。
 
 ## 8. 工夫した点 / こだわり（Key Points）
 
@@ -155,7 +209,3 @@ flowchart LR
 - もっと汎用的に使えるよう拡張
 - コメントやドキュメントの充実
 - 設定の自動化など
-
-## 10. ライセンス（License）
-
-必要に応じて OSS ライセンスを記述します。（MIT など）
