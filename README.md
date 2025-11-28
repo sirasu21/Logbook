@@ -94,7 +94,52 @@ LINE と Web の両方から簡単にトレーニング記録ができるアプ�
 
 ## 6. アーキテクチャ（Architecture）
 
-本雛形の構成は以下のようになっています。
+Logbook は Web（React）と LINE Bot の 2 つの入口を持ちながらも、内部はひとつの共通サーバー（Clean Architecture）で動作しています。これにより、UI が違っても同じビジネスロジックを利用でき、拡張性と保守性を重視した設計になっています。
+
+### 全体構成の考え方
+
+- UI（Web / LINE）
+  - Web：LINE OAuth でログインし、管理画面や記録の閲覧
+  - LINE：ボタン操作（postback）で記録の追加
+- Controller
+  - Web と LINE それぞれのリクエストを受け取る入り口
+- Usecase（ビジネスロジック）
+  - 記録の追加、種目の管理、履歴の取得などを共通化
+- Repository（永続化）
+  - DB の読み書きを担当し、Domain モデルを扱う
+- DB
+  - ユーザー / 種目 / ワークアウト / セットなどのデータを管理
+
+UI は違っても「Controller → Usecase → Repository → DB」の流れは同じで、機能追加や修正が 1 箇所で済むようにしています。
+
+### メリット
+
+- Web/LINE の両対応でもロジックは共通
+- 新しい UI（スマホアプリなど）を追加しやすい
+- テストしやすく、保守性が高い
+- ビジネスロジックが UI に依存しない
+
+```mermaid
+flowchart LR
+    WUD[web user] --> WSD[web server]
+    WSD --> DBD[DB]
+    LUD[LINE USER] --> LSD[LINE server]
+    LSD --> DBD
+
+    subgraph server["server"]
+      WCtrl[Web Controller] --> UC[Usecase]
+      LCtrl[LINE Controller] --> UC
+      UC --> RP[Repository]
+    end
+
+    RP --> DB[DB]
+    WUS[web user] --> WCtrl
+    LUS[LINE user] --> LCtrl
+
+    subgraph Legend[" "]
+        L1["—> : 処理の流れ"]
+    end
+```
 
 ## 7. 実行方法（How to Run）
 
