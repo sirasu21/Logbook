@@ -121,11 +121,6 @@ UI は違っても「Controller → Usecase → Repository → DB」の流れは
 
 ```mermaid
 flowchart LR
-    WUD[web user] --> WSD[web server]
-    WSD --> DBD[DB]
-    LUD[LINE USER] --> LSD[LINE server]
-    LSD --> DBD
-
     subgraph server["server"]
       WCtrl[Web Controller] --> UC[Usecase]
       LCtrl[LINE Controller] --> UC
