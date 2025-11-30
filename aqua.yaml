@@ -1,0 +1,10 @@
+registries:
+  - type: standard
+    ref: v4.395.0
+
+packages:
+  # Go toolchain / task runner / linters
+  - name: golang/go@go1.25.0
+
+  - name: nodejs/node@v24.6.0
+  - name: pnpm/pnpm@v10.14.0
