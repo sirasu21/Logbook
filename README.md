@@ -38,7 +38,11 @@ LINE と Web の両方から簡単にトレーニング記録ができるアプ�
 
 ## 3. デモ（Demo）
 
-![Logbook デモ](docs/demo/demo.gif)
+![Logbook home](docs/demo/home.png)
+
+![Logbook デモ](docs/demo/demo_fast25.gif)
+
+上段のスクリーンショットは Web 側（LINE Login 後のトップ）で、トレーニング履歴一覧がカードやメトリクスと並んで見える構成を示しています。下段の GIF では LINE 側の「開始・セット追加・終了」ボタンを順に押しながら記録が追加され、同時に Web の一覧にも最新ワークアウトがリアルタイムで反映される流れを確認できます。
 
 ## 4. 主な特徴（Features）
 
